@@ -8,7 +8,7 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 |------|--------|-------------|
 | Dark Maze | [`maze/`](maze/) | Drag the ball through a maze you can only see around you and find the corner exit before time runs out. |
 | Hex Sequence | [`sequence/`](sequence/) | Enter a 4-code sequence on a 5×5 grid: 1→2 same column, 2→3 same row, 3→4 same column. |
-| Align the Columns | [`columns/`](columns/) | Click when each column's moving gap lines up with the horizontal line. Misses cost time. |
+| Align the Columns – Dark Queue Crate Hack | [`columns/`](columns/) | Click when each column's moving gap lines up with the horizontal line. Misses cost time. |
 
 ## Adding a game
 
