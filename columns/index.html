@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Align the Columns Practice</title>
+<style>
+  :root{--size:568px;--text:#dcdcdc;--muted:#8b8b8b;--gold:#e0b32c;--red:#ff3a55}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:var(--text);
+    font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(ellipse at 50% 30%,#1d1d1a 0%,#0d0d0c 65%,#080807 100%);background-attachment:fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .back{width:var(--size);color:var(--muted);text-decoration:none;font-size:13px}
+  .back:hover{color:var(--gold)}
+  .hud{width:var(--size);display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .hud b{color:var(--text);font-weight:600}
+  .title{width:var(--size);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#cfcfcf;font-weight:700}
+  .board{position:relative;width:var(--size);height:var(--size);user-select:none}
+  canvas{display:block;width:100%;height:100%;border:1px solid #4a4a46;border-radius:4px;cursor:pointer;touch-action:manipulation;transition:border-color .1s}
+  canvas.miss{border-color:var(--red)}
+  .bar{width:var(--size);height:9px;background:#b9b2b4;border:1px solid #e64a5f;border-radius:5px;overflow:hidden}
+  .bar>div{height:100%;width:0;background:var(--red)}
+  .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(8,8,6,.78);border-radius:4px;padding:20px}
+  .overlay.show{display:flex}
+  .box{border:1px solid #3fd27a;color:#3fd27a;background:#0b1a10;border-radius:4px;padding:9px 18px;font-size:14px;font-weight:600}
+  .box.fail{border-color:var(--red);color:var(--red);background:#1a0b0e}
+  .box.neutral{border-color:var(--gold);color:var(--gold);background:#1a160b}
+  .sub{color:#b5b5b5;font-size:13px;font-variant-numeric:tabular-nums;max-width:92%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#8a6d12;border-color:#c99c1f;color:#fff}
+  button.primary:hover{background:#9f7e16}
+  .row{width:var(--size);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--size);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,20,18,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;padding:4px 12px 14px}
+  .settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .settings label b{color:var(--text);font-weight:600}
+  .settings input[type=range]{width:100%;accent-color:#c99c1f}
+  .rules{grid-column:1/-1;color:#8a8a8a;font-size:12px;line-height:1.5;border-top:1px solid #262626;padding-top:10px}
+  .rules b{color:#cfcfcf}
+  @media (max-width:520px){.settings{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">&larr; All games</a>
+  <div class="title">Align the security columns</div>
+  <div class="hud">
+    <span>Column <b id="hCol">1/8</b> · Phase <b id="hPhase">1/1</b></span>
+    <span>Misses <b id="hMiss">0</b> · Time left <b id="hTime">20.0s</b></span>
+  </div>
+
+  <div class="board">
+    <canvas id="cv"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="box" id="oBox"></div>
+      <div class="sub" id="oSub"></div>
+      <div class="btns" id="oBtns"></div>
+    </div>
+  </div>
+
+  <div class="bar"><div id="barFill"></div></div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>Practice settings &amp; rules</summary>
+    <div class="settings">
+      <label><span>Time limit <b id="vTime"></b></span><input id="sTime" type="range" min="8" max="60" step="1"></label>
+      <label><span>Miss penalty <b id="vPen"></b></span><input id="sPen" type="range" min="0" max="6" step="0.5"></label>
+      <label><span>Speed (one full up-down) <b id="vPeriod"></b></span><input id="sPeriod" type="range" min="1.5" max="6" step="0.25"></label>
+      <label><span>Hit window <b id="vTol"></b></span><input id="sTol" type="range" min="4" max="30" step="1"></label>
+      <label><span>Columns <b id="vCols"></b></span><input id="sCols" type="range" min="4" max="12" step="1"></label>
+      <label><span>Phases <b id="vPhases"></b></span><input id="sPhases" type="range" min="1" max="5" step="1"></label>
+      <div class="rules">
+        <b>How to play:</b> the bright column's gap slides up and down. Click (or press <b>Space</b>) when the gap is on the
+        horizontal line to lock it — then the next column lights up. A miss costs time. Lock every column before the red bar fills.
+        Hit window = how far (in px on a 568px board) the gap's centre may be from the line's centre. Keys: R = restart, Enter = start.
+      </div>
+    </div>
+  </details>
+</main>
+
+<script>
+(() => {
+  const L = 568;                         // logical board size
+  const BAND_H = 28, GAP_H = 45, COL_W = 34;
+  const AMP = 0.35;                      // gap centre swings between 15% and 85% of height
+  const DEFAULTS = {time:20, penalty:2, period:3, tol:14, cols:8, phases:1};
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let cfg = Object.assign({}, DEFAULTS, store.get('cols.cfg', {}));
+  let stats = store.get('cols.stats', {});
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const bgC = document.createElement('canvas'), bgX = bgC.getContext('2d');
+  let px = 1;
+
+  let state = 'idle';      // idle | running | between | won | lost
+  let phase = 0, active = 0, locked = [], phaseOffset = 0;
+  let t0 = 0, penalty = 0, misses = 0, clicks = 0, endTime = 0;
+  let flashUntil = 0, flashCol = -1, lockAnim = [];
+
+  const now = () => performance.now() / 1000;
+  const colX = k => {
+    const n = cfg.cols, margin = 37, span = L - 2*margin;
+    return margin + (n === 1 ? span/2 : k * span/(n-1));
+  };
+  // gap centre (logical px) for column k at time t
+  const gapCentre = (k, t) => L/2 + AMP*L * Math.sin(2*Math.PI*t/cfg.period + phaseOffset - k*2*Math.PI/8);
+
+  const elapsed = () => state === 'running' || state === 'between' ? now() - t0 + penalty : endTime;
+
+  // ---------- drawing ----------
+  function resize(){
+    const s = Math.floor(Math.max(260, Math.min(780, window.innerWidth - 32, window.innerHeight - 210)));
+    document.documentElement.style.setProperty('--size', s + 'px');
+    const dpr = window.devicePixelRatio || 1;
+    px = s / L * dpr;
+    for (const c of [cv, bgC]){ c.width = Math.round(s*dpr); c.height = Math.round(s*dpr); }
+    bgX.setTransform(1,0,0,1,0,0);
+    bgX.fillStyle = '#272725'; bgX.fillRect(0,0,bgC.width,bgC.height);
+    bgX.setTransform(px,0,0,px,0,0);
+    bgX.fillStyle = 'rgba(255,255,255,0.03)';
+    for (let y = 0; y < L; y += 3) for (let x = (y/3)%2 ? 1.5 : 0; x < L; x += 3) bgX.fillRect(x, y, 1, 1);
+  }
+
+  function rr(x, y, w, h, r){
+    if (h <= 0) return;
+    r = Math.min(r, h/2, w/2);
+    ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  function draw(){
+    const t = now();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(bgC, 0, 0);
+    ctx.setTransform(px,0,0,px,0,0);
+
+    const dim = state === 'won' || state === 'lost' || state === 'idle';
+    for (let k = 0; k < cfg.cols; k++){
+      let c;
+      if (locked[k]){
+        const a = lockAnim[k];
+        const p = Math.min(1, (t - a.t) / 0.12);
+        c = a.from + (L/2 - a.from) * (1 - Math.pow(1-p, 3));
+      } else c = gapCentre(k, t);
+      const isActive = state !== 'idle' && k === active && !locked[k] && !dim;
+      const flashing = k === flashCol && t < flashUntil;
+      const x = colX(k) - COL_W/2;
+      const gTop = c - GAP_H/2, gBot = c + GAP_H/2;
+      if (flashing){ ctx.fillStyle = 'rgba(255,58,85,.75)'; ctx.strokeStyle = '#ff3a55'; }
+      else if (isActive){ ctx.fillStyle = 'rgba(214,172,40,.92)'; ctx.strokeStyle = '#f5cc45'; }
+      else { ctx.fillStyle = 'rgba(190,150,35,.38)'; ctx.strokeStyle = 'rgba(232,190,60,.85)'; }
+      ctx.lineWidth = 1;
+      if (isActive && !flashing){ ctx.save(); ctx.shadowColor = 'rgba(255,200,40,.6)'; ctx.shadowBlur = 10; }
+      rr(x, -4, COL_W, gTop + 4, 3); ctx.fill(); ctx.stroke();
+      rr(x, gBot, COL_W, L + 4 - gBot, 3); ctx.fill(); ctx.stroke();
+      if (isActive && !flashing) ctx.restore();
+    }
+
+    // target band
+    const by = L/2 - BAND_H/2;
+    ctx.fillStyle = 'rgba(214,172,40,.28)';
+    ctx.fillRect(0, by, L, BAND_H);
+    ctx.strokeStyle = 'rgba(240,200,70,.9)'; ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath(); ctx.moveTo(0, by+.5); ctx.lineTo(L, by+.5); ctx.moveTo(0, by+BAND_H-.5); ctx.lineTo(L, by+BAND_H-.5); ctx.stroke();
+    ctx.setLineDash([]);
+
+    if (dim && state !== 'idle'){ ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0,0,L,L); }
+  }
+
+  // ---------- game flow ----------
+  function newPhase(){
+    locked = Array(cfg.cols).fill(false); lockAnim = [];
+    active = 0;
+    phaseOffset = Math.random() * Math.PI * 2;
+  }
+
+  function start(){
+    hideOverlay();
+    phase = 0; penalty = 0; misses = 0; clicks = 0; endTime = 0;
+    newPhase();
+    state = 'running'; t0 = now();
+  }
+
+  function attempt(){
+    if (state !== 'running') return;
+    const t = now();
+    clicks++;
+    const c = gapCentre(active, t);
+    if (Math.abs(c - L/2) <= cfg.tol){
+      locked[active] = true; lockAnim[active] = {from: c, t};
+      active++;
+      if (active >= cfg.cols){
+        if (phase + 1 >= cfg.phases) return win();
+        state = 'between';
+        setTimeout(() => { if (state !== 'between') return; phase++; newPhase(); state = 'running'; }, 500);
+      }
+    } else {
+      misses++; penalty += cfg.penalty;
+      flashCol = active; flashUntil = t + 0.25;
+      cv.classList.add('miss'); setTimeout(() => cv.classList.remove('miss'), 250);
+    }
+  }
+
+  function win(){
+    endTime = now() - t0 + penalty;
+    state = 'won';
+    const pb = record(true);
+    const acc = clicks ? Math.round((clicks - misses) / clicks * 100) : 100;
+    showOverlay('All Phases Cleared', '',
+      `${endTime.toFixed(1)}s of ${cfg.time}s used · ${misses} miss${misses===1?'':'es'} · ${acc}% accuracy${pb ? ' · new best!' : ''}`);
+  }
+  function lose(){
+    endTime = cfg.time;
+    state = 'lost';
+    record(false);
+    showOverlay("Time's up", 'fail',
+      `Locked ${active} of ${cfg.cols} columns${cfg.phases > 1 ? ` in phase ${phase+1}/${cfg.phases}` : ''} · ${misses} miss${misses===1?'':'es'}`);
+  }
+
+  function showOverlay(title, kind, sub, btns){
+    $('oBox').textContent = title; $('oBox').className = 'box' + (kind ? ' ' + kind : '');
+    $('oSub').innerHTML = sub;
+    const b = $('oBtns'); b.innerHTML = '';
+    for (const [label, fn, primary] of (btns || [[state === 'idle' ? 'Start (Enter)' : 'Again (R)', start, true]])){
+      const e = document.createElement('button'); e.textContent = label; if (primary) e.className = 'primary'; e.onclick = ev => { ev.stopPropagation(); fn(); };
+      b.appendChild(e);
+    }
+    $('overlay').classList.add('show');
+  }
+  const hideOverlay = () => $('overlay').classList.remove('show');
+
+  function toIdle(){
+    state = 'idle'; phase = 0; penalty = 0; misses = 0; endTime = 0; newPhase();
+    showOverlay('Align the security columns', 'neutral',
+      `Click when the bright column's gap is on the line. ${cfg.cols} columns · ${cfg.time}s · misses cost ${cfg.penalty}s.`);
+    renderStats();
+  }
+
+  function record(won){
+    const key = `${cfg.cols}c-${cfg.period}s-${cfg.tol}px-${cfg.time}t-${cfg.phases}p`;
+    const s = stats[key] || (stats[key] = {runs:0, wins:0, best:null});
+    s.runs++;
+    let pb = false;
+    if (won){ s.wins++; if (s.best == null || endTime < s.best){ s.best = endTime; pb = true; } }
+    store.set('cols.stats', stats);
+    renderStats();
+    return pb;
+  }
+  function renderStats(){
+    const key = `${cfg.cols}c-${cfg.period}s-${cfg.tol}px-${cfg.time}t-${cfg.phases}p`;
+    const s = stats[key];
+    $('stats').innerHTML = s && s.runs
+      ? `These settings: best <b>${s.best != null ? s.best.toFixed(1)+'s' : '—'}</b> · cleared <b>${s.wins}/${s.runs}</b>`
+      : 'These settings: no runs yet';
+  }
+
+  function frame(){
+    if (state === 'running' && elapsed() >= cfg.time) lose();
+    const used = Math.min(elapsed(), cfg.time);
+    $('barFill').style.width = (used / cfg.time * 100) + '%';
+    $('hTime').textContent = Math.max(0, cfg.time - used).toFixed(1) + 's';
+    $('hCol').textContent = `${Math.min(active+1, cfg.cols)}/${cfg.cols}`;
+    $('hPhase').textContent = `${phase+1}/${cfg.phases}`;
+    $('hMiss').textContent = misses;
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- input ----------
+  cv.addEventListener('pointerdown', e => { e.preventDefault(); attempt(); });
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space'){ e.preventDefault(); if (!e.repeat) attempt(); }
+    else if (e.key === 'r' || e.key === 'R') start();
+    else if (e.key === 'Enter' && state === 'idle') start();
+  });
+  $('bRestart').onclick = e => { e.currentTarget.blur(); start(); };
+
+  // ---------- settings ----------
+  const fields = [
+    ['sTime','vTime','time', v => v + 's'],
+    ['sPen','vPen','penalty', v => '−' + v + 's'],
+    ['sPeriod','vPeriod','period', v => v + 's'],
+    ['sTol','vTol','tol', v => '±' + v + 'px'],
+    ['sCols','vCols','cols', v => v],
+    ['sPhases','vPhases','phases', v => v],
+  ];
+  function syncUI(){ for (const [s, v, k, f] of fields){ $(s).value = cfg[k]; $(v).textContent = f(cfg[k]); } }
+  for (const [s, v, k, f] of fields){
+    $(s).oninput = () => { $(v).textContent = f(+$(s).value); };
+    $(s).onchange = () => { cfg[k] = +$(s).value; store.set('cols.cfg', cfg); syncUI(); toIdle(); };
+  }
+
+  window.addEventListener('resize', resize);
+  resize(); syncUI(); toIdle(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

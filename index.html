@@ -69,6 +69,19 @@
         ${[['7A','E9','BD','1C'],['55','7A','FF','E9'],['BD','E9','7A','55'],['1C','FF','BD','7A']].map((row,r)=>row.map((t,c)=>`<text x="${20+c*20}" y="${25+r*20}" fill="${r===1&&c===1?'#fff':c===2?'#f3c234':'#d3133f'}">${t}</text>`).join('')).join('')}
       </svg>`
     },
+    {
+      path: 'columns/',
+      name: 'Align the Columns',
+      desc: 'Each column\'s gap slides up and down. Click when the bright column\'s gap is on the line to lock it. Misses cost time.',
+      tags: ['Timing', '8 columns', '20s timer'],
+      thumb: `<svg viewBox="0 0 100 100">
+        ${[0,1,2,3,4,5,6,7].map(k=>{const x=10+k*11, c=50+28*Math.sin(1.2-k*Math.PI/4)*(k<2?0:1), a=k===2;
+          const f=a?'rgba(214,172,40,.95)':'rgba(190,150,35,.4)';
+          return `<rect x="${x}" y="6" width="6" height="${c-4-6}" rx="1" fill="${f}" stroke="#e8be3c" stroke-width=".5"/><rect x="${x}" y="${c+4}" width="6" height="${94-c-4}" rx="1" fill="${f}" stroke="#e8be3c" stroke-width=".5"/>`}).join('')}
+        <rect x="6" y="47.5" width="88" height="5" fill="rgba(214,172,40,.3)"/>
+        <path d="M6 47.5H94M6 52.5H94" stroke="#f0c846" stroke-width=".5" stroke-dasharray="1 1"/>
+      </svg>`
+    },
   ];
 
   const grid = document.getElementById('grid');
