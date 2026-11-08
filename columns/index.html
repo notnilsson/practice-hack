@@ -76,14 +76,14 @@
     <div class="settings">
       <label><span>Time limit <b id="vTime"></b></span><input id="sTime" type="range" min="8" max="60" step="1"></label>
       <label><span>Miss penalty <b id="vPen"></b></span><input id="sPen" type="range" min="0" max="6" step="0.5"></label>
-      <label><span>Speed (one full up-down) <b id="vPeriod"></b></span><input id="sPeriod" type="range" min="1.5" max="6" step="0.25"></label>
-      <label><span>Hit window <b id="vTol"></b></span><input id="sTol" type="range" min="4" max="30" step="1"></label>
+      <label><span>Speed (one full up-down) <b id="vPeriod"></b></span><input id="sPeriod" type="range" min="1.5" max="6" step="0.05"></label>
+      <label><span>Hit window <b id="vTol"></b></span><input id="sTol" type="range" min="4" max="36" step="1"></label>
       <label><span>Columns <b id="vCols"></b></span><input id="sCols" type="range" min="4" max="12" step="1"></label>
       <label><span>Phases <b id="vPhases"></b></span><input id="sPhases" type="range" min="1" max="5" step="1"></label>
       <div class="rules">
         <b>How to play:</b> the bright column's gap slides up and down. Click (or press <b>Space</b>) when the gap is on the
         horizontal line to lock it — then the next column lights up. A miss costs time. Lock every column before the red bar fills.
-        Hit window = how far (in px on a 568px board) the gap's centre may be from the line's centre. Keys: R = restart, Enter = start.
+        Like the in-game version, a click counts if <b>any part of the gap touches the line</b> (a graze is enough). Lower the hit window to train for a stricter, centred click. Keys: R = restart, Enter = start.
       </div>
     </div>
   </details>
@@ -94,12 +94,13 @@
   const L = 568;                         // logical board size
   const BAND_H = 28, GAP_H = 45, COL_W = 34;
   const AMP = 0.35;                      // gap centre swings between 15% and 85% of height
-  const DEFAULTS = {time:20, penalty:2, period:3, tol:14, cols:8, phases:1};
+  const ANY_OVERLAP = 36;                // gap (45) and band (28) touch when centres are within 36.5px
+  const DEFAULTS = {time:20, penalty:2, period:2.95, tol:ANY_OVERLAP, cols:8, phases:1};
   const store = {
     get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  let cfg = Object.assign({}, DEFAULTS, store.get('cols.cfg', {}));
+  let cfg = Object.assign({}, DEFAULTS, store.get('cols.cfg.v2', {}));
   let stats = store.get('cols.stats', {});
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
@@ -295,14 +296,14 @@
     ['sTime','vTime','time', v => v + 's'],
     ['sPen','vPen','penalty', v => '−' + v + 's'],
     ['sPeriod','vPeriod','period', v => v + 's'],
-    ['sTol','vTol','tol', v => '±' + v + 'px'],
+    ['sTol','vTol','tol', v => v >= ANY_OVERLAP ? 'any overlap (like in-game)' : '±' + v + 'px (stricter)'],
     ['sCols','vCols','cols', v => v],
     ['sPhases','vPhases','phases', v => v],
   ];
   function syncUI(){ for (const [s, v, k, f] of fields){ $(s).value = cfg[k]; $(v).textContent = f(cfg[k]); } }
   for (const [s, v, k, f] of fields){
     $(s).oninput = () => { $(v).textContent = f(+$(s).value); };
-    $(s).onchange = () => { cfg[k] = +$(s).value; store.set('cols.cfg', cfg); syncUI(); toIdle(); };
+    $(s).onchange = () => { cfg[k] = +$(s).value; store.set('cols.cfg.v2', cfg); syncUI(); toIdle(); };
   }
 
   window.addEventListener('resize', resize);
