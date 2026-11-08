@@ -51,6 +51,7 @@
     {id: 'bobcat',    name: 'Bobcat'},
     {id: 'arms-deal', name: 'Arms Deal'},
     {id: 'dark-queue', name: 'Dark Queue'},
+    {id: 'store-safe', name: '24/7 Store Safe'},
   ];
 
   // To add a game: put it in its own folder (e.g. lockpick/index.html) and add an entry here,
@@ -98,6 +99,19 @@
           return `<rect x="${x}" y="6" width="6" height="${c-4-6}" rx="1" fill="${f}" stroke="#e8be3c" stroke-width=".5"/><rect x="${x}" y="${c+4}" width="6" height="${94-c-4}" rx="1" fill="${f}" stroke="#e8be3c" stroke-width=".5"/>`}).join('')}
         <rect x="6" y="47.5" width="88" height="5" fill="rgba(214,172,40,.3)"/>
         <path d="M6 47.5H94M6 52.5H94" stroke="#f0c846" stroke-width=".5" stroke-dasharray="1 1"/>
+      </svg>`
+    },
+    {
+      path: 'safe/',
+      job: 'store-safe',
+      name: 'Ball Gate',
+      desc: 'Hold left click to open the gate and let the orange balls in, let go to keep the red ones out. Fill the bar to clear each phase.',
+      tags: ['Hold click', '3 phases', 'Timing'],
+      thumb: `<svg viewBox="0 0 100 100">
+        ${[['#a77506','#f2b21c',14],['#b22d2a','#ff4a3d',30],['#a77506','#f2b21c',46],['#a77506','#f2b21c',62]].map(([f,s,y])=>`<circle cx="50" cy="${y}" r="5.5" fill="${f}" stroke="${s}" stroke-width=".8"/>`).join('')}
+        <circle cx="38" cy="76" r="5.5" fill="#b22d2a" stroke="#ff4a3d" stroke-width=".8"/>
+        <circle cx="62" cy="76" r="5.5" fill="#b22d2a" stroke="#ff4a3d" stroke-width=".8"/>
+        <circle cx="50" cy="89" r="5.5" fill="#a77506" stroke="#f2b21c" stroke-width=".8"/>
       </svg>`
     },
   ];

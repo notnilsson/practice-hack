@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ball Gate – 24/7 Store Safe Practice</title>
+<style>
+  :root{--size:568px;--text:#dcdcdc;--muted:#8b8b8b;--orange:#f0a818;--red:#ff3b30}
+  *{box-sizing:border-box}
+  .topbar{width:var(--size);display:flex}
+  .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
+    background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
+  .back svg{width:16px;height:16px;transition:transform .15s}
+  .back:hover{background:rgba(240,168,24,.12);border-color:var(--orange);color:#fff}
+  .back:hover svg{transform:translateX(-2px)}
+  .back:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+  html{background:#08090b}
+  html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:radial-gradient(ellipse at 50% 30%,#1d1c1a 0%,#0d0d0c 65%,#080807 100%) fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .hud{width:var(--size);display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .hud b{color:var(--text);font-weight:600}
+  .board{position:relative;width:var(--size);height:var(--size);user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;border:1px solid #444441;border-radius:4px;touch-action:none;cursor:pointer;transition:border-color .1s}
+  canvas.miss{border-color:var(--red)}
+  .bars{width:var(--size);display:flex;gap:4px}
+  .bars div{flex:1;height:10px;background:#3b3b3d;border-radius:3px;overflow:hidden;position:relative}
+  .bars div.cur{background:#8f8d8e}
+  .bars i{position:absolute;left:0;top:0;bottom:0;width:0;background:#ff2b2b;transition:width .12s ease-out}
+  .bars div.done i{width:100%}
+  .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;background:rgba(6,6,6,.82);border-radius:4px;padding:20px}
+  .overlay.show{display:flex}
+  .overlay.flash{background:rgba(0,0,0,.92)}
+  .box{border:1px solid #3fd27a;color:#3fd27a;background:#0b1a10;border-radius:4px;padding:9px 18px;font-size:14px;font-weight:600}
+  .box.fail{border-color:var(--red);color:var(--red);background:#1a0b0b}
+  .box.neutral{border-color:var(--orange);color:var(--orange);background:#1a140b}
+  .box.plain{border:none;background:none;color:#f2f2f2;font-size:13px}
+  .sub{color:#b5b5b5;font-size:13px;font-variant-numeric:tabular-nums;max-width:92%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#8f6206;border-color:#d39614;color:#fff}
+  button.primary:hover{background:#a67309}
+  .row{width:var(--size);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--size);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,20,18,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;padding:4px 12px 14px}
+  .settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .settings label b{color:var(--text);font-weight:600}
+  .settings input[type=range]{width:100%;accent-color:#d39614}
+  .settings .check{flex-direction:row;align-items:center;gap:8px;color:#bbb}
+  .settings .check input{accent-color:#d39614}
+  .rules{grid-column:1/-1;color:#8a8a8a;font-size:12px;line-height:1.5;border-top:1px solid #262626;padding-top:10px}
+  .rules b{color:#cfcfcf}
+  @media (max-width:520px){.settings{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
+  <div class="hud">
+    <span>Phase <b id="hPhase">1/3</b> · Progress <b id="hProg">0/24</b></span>
+    <span>Mistakes <b id="hMiss">0</b> · Time <b id="hTime">0.0s</b></span>
+  </div>
+
+  <div class="board">
+    <canvas id="cv"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="box" id="oBox"></div>
+      <div class="sub" id="oSub"></div>
+      <div class="btns" id="oBtns"></div>
+    </div>
+  </div>
+
+  <div class="bars" id="bars"></div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>Practice settings &amp; rules</summary>
+    <div class="settings">
+      <label><span>Ball speed <b id="vSpeed"></b></span><input id="sSpeed" type="range" min="0.5" max="2" step="0.05"></label>
+      <label><span>Correct balls per phase <b id="vPer"></b></span><input id="sPer" type="range" min="6" max="40" step="1"></label>
+      <label><span>Phases <b id="vPhases"></b></span><input id="sPhases" type="range" min="1" max="5" step="1"></label>
+      <label><span>Mistake penalty <b id="vPen"></b></span><input id="sPen" type="range" min="0" max="6" step="1"></label>
+      <label><span>Share of red balls <b id="vRed"></b></span><input id="sRed" type="range" min="20" max="80" step="5"></label>
+      <label class="check"><input id="sFail" type="checkbox"> Hard mode: any mistake fails the hack</label>
+      <div class="rules">
+        <b>How to play:</b> balls drop toward the gate (the two red balls at the bottom).
+        <b>Hold left click</b> (anywhere on the board) or <b>hold Space</b> to open the gate and let <b>orange</b> balls through;
+        <b>let go</b> to close it so <b>red</b> balls are blocked. Each correct ball fills the bar; fill it to clear the phase.
+        The gate takes ~0.2s to open, so start holding just before an orange ball arrives.
+        Keys: R = restart, Enter = start.
+      </div>
+    </div>
+  </details>
+</main>
+
+<script>
+(() => {
+  const L = 568, CX = L/2, R = 16;
+  const GATE_Y = 487, RECV_Y = 527;
+  const CLOSED = 16.5, OPEN = 37;          // half-distance between the two gate balls
+  const SPACING = 104, BASE_SPEED = 200;   // px between balls, px/s (measured from the clip)
+  const GATE_TIME = 0.2;                   // seconds to fully open / close
+  const PASS_HALF = 30;                    // gate half-spread needed for a ball to slip through
+  const CONTACT_Y = GATE_Y - Math.sqrt((2*R)**2 - CLOSED**2);
+  const DEFAULTS = {speed:1, per:24, phases:3, penalty:2, red:50, fail:false};
+
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let cfg = Object.assign({}, DEFAULTS, store.get('safe.cfg', {}));
+  let stats = store.get('safe.stats', {});
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const bgC = document.createElement('canvas'), bgX = bgC.getContext('2d');
+  let px = 1;
+
+  let state = 'idle';           // idle | running | between | won | lost
+  let phase = 0, progress = 0, mistakes = 0, t0 = 0, endTime = 0;
+  let balls = [], pops = [], gate = 0, holding = false, spawnAcc = 0, lastT = 0, redRun = 0, orangeRun = 0;
+  let missUntil = 0;
+
+  const now = () => performance.now() / 1000;
+  const speed = () => BASE_SPEED * cfg.speed;
+
+  // ---------- drawing ----------
+  function resize(){
+    const s = Math.floor(Math.max(260, Math.min(780, window.innerWidth - 32, window.innerHeight - 220)));
+    document.documentElement.style.setProperty('--size', s + 'px');
+    const dpr = window.devicePixelRatio || 1;
+    px = s / L * dpr;
+    for (const c of [cv, bgC]){ c.width = Math.round(s*dpr); c.height = Math.round(s*dpr); }
+    bgX.setTransform(1,0,0,1,0,0);
+    bgX.fillStyle = '#1d1d1d'; bgX.fillRect(0,0,bgC.width,bgC.height);
+    bgX.setTransform(px,0,0,px,0,0);
+    bgX.fillStyle = 'rgba(255,255,255,0.03)';
+    for (let y = 0; y < L; y += 3) for (let x = (y/3)%2 ? 1.5 : 0; x < L; x += 3) bgX.fillRect(x, y, 1, 1);
+  }
+
+  const STYLE = {
+    orange: {fill:'#a77506', stroke:'#f2b21c'},
+    red:    {fill:'#b22d2a', stroke:'#ff4a3d'},
+  };
+  function ball(x, y, kind, alpha = 1, scale = 1){
+    const s = STYLE[kind];
+    ctx.globalAlpha = alpha;
+    ctx.beginPath(); ctx.arc(x, y, R*scale, 0, Math.PI*2);
+    ctx.fillStyle = s.fill; ctx.fill();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = s.stroke; ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  function draw(){
+    const t = now();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(bgC, 0, 0);
+    ctx.setTransform(px,0,0,px,0,0);
+
+    // receiver (static orange ball under the gate)
+    ball(CX, RECV_Y, 'orange');
+    // falling balls
+    for (const b of balls) ball(CX, b.y, b.kind);
+    // pops (blocked / absorbed balls)
+    pops = pops.filter(p => t - p.t < 0.25);
+    for (const p of pops){ const k = (t - p.t) / 0.25; ball(CX, p.y, p.kind, 1 - k, 1 + k*0.35); }
+    // gate
+    const half = CLOSED + (OPEN - CLOSED) * gate;
+    ball(CX - half, GATE_Y, 'red');
+    ball(CX + half, GATE_Y, 'red');
+
+    if (t < missUntil){
+      ctx.fillStyle = `rgba(255,40,40,${0.18 * (missUntil - t) / 0.3})`;
+      ctx.fillRect(0, 0, L, L);
+    }
+    if (state === 'won' || state === 'lost'){ ctx.fillStyle = 'rgba(0,0,0,.4)'; ctx.fillRect(0,0,L,L); }
+  }
+
+  // ---------- game logic ----------
+  function nextKind(){
+    let red = Math.random() * 100 < cfg.red;
+    if (redRun >= 4) red = false;            // avoid absurdly long runs
+    if (orangeRun >= 4) red = true;
+    if (red){ redRun++; orangeRun = 0; } else { orangeRun++; redRun = 0; }
+    return red ? 'red' : 'orange';
+  }
+
+  function resetPhase(){
+    balls = []; pops = []; progress = 0; spawnAcc = SPACING; redRun = orangeRun = 0;
+    // pre-fill the column like the in-game one (balls already on their way in)
+    for (let y = CONTACT_Y - SPACING*1.6; y > -R; y -= SPACING) balls.push({y, kind: nextKind(), decided:false});
+  }
+
+  function step(dt){
+    const target = holding ? 1 : 0;
+    const dg = dt / GATE_TIME;
+    gate = gate < target ? Math.min(target, gate + dg) : Math.max(target, gate - dg);
+
+    if (state !== 'running') return;
+    const v = speed();
+    spawnAcc += v * dt;
+    while (spawnAcc >= SPACING){
+      spawnAcc -= SPACING;
+      const topY = balls.length ? Math.min(...balls.map(b => b.y)) : 0;
+      balls.push({y: Math.min(-R, topY - SPACING), kind: nextKind(), decided:false});
+    }
+    const half = CLOSED + (OPEN - CLOSED) * gate;
+    const t = now();
+    for (const b of balls){
+      if (!b.decided){
+        b.y += v * dt;
+        if (b.y >= CONTACT_Y){
+          b.decided = true;
+          b.passes = half >= PASS_HALF;
+          if (!b.passes){ b.dead = true; pops.push({y: CONTACT_Y, kind: b.kind, t}); }
+          judge(b.kind, b.passes);
+        }
+      } else if (b.passes){
+        b.y += v * dt;
+        if (b.y >= RECV_Y - 4){ b.dead = true; pops.push({y: RECV_Y, kind: b.kind, t}); }
+      }
+    }
+    balls = balls.filter(b => !b.dead);
+  }
+
+  function judge(kind, passed){
+    if (state !== 'running') return;
+    const ok = (kind === 'orange') === passed;
+    if (ok){
+      progress++;
+      if (progress >= cfg.per) phaseCleared();
+    } else {
+      mistakes++;
+      missUntil = now() + 0.3;
+      cv.classList.add('miss'); setTimeout(() => cv.classList.remove('miss'), 250);
+      if (cfg.fail) return lose(kind === 'red' ? 'A red ball got through.' : 'An orange ball was blocked.');
+      progress = Math.max(0, progress - cfg.penalty);
+    }
+    paintBars();
+  }
+
+  function phaseCleared(){
+    paintBars();
+    if (phase + 1 >= cfg.phases) return win();
+    state = 'between';
+    holding = false;
+    showOverlay(`Phase ${phase+1} Cleared`, 'plain', '', [], true);
+    setTimeout(() => {
+      if (state !== 'between') return;
+      hideOverlay(); phase++; resetPhase(); paintBars(); state = 'running';
+    }, 1300);
+  }
+
+  function start(){
+    hideOverlay();
+    phase = 0; mistakes = 0; endTime = 0; gate = 0;
+    holding = false;
+    resetPhase(); buildBars();
+    state = 'running'; t0 = now();
+  }
+
+  function win(){
+    endTime = now() - t0; state = 'won'; holding = false;
+    const pb = record(true);
+    showOverlay('Safe opened', '', `${endTime.toFixed(1)}s · ${mistakes} mistake${mistakes===1?'':'s'}${pb ? ' · new best!' : ''}`);
+  }
+  function lose(why){
+    endTime = now() - t0; state = 'lost'; holding = false;
+    record(false);
+    showOverlay('Hack failed', 'fail', why + ` Phase ${phase+1}/${cfg.phases}, ${progress}/${cfg.per}.`);
+  }
+
+  function record(won){
+    const key = statKey();
+    const s = stats[key] || (stats[key] = {runs:0, wins:0, best:null});
+    s.runs++;
+    let pb = false;
+    if (won){ s.wins++; if (s.best == null || endTime < s.best){ s.best = endTime; pb = true; } }
+    store.set('safe.stats', stats);
+    renderStats();
+    return pb;
+  }
+  const statKey = () => `${cfg.speed}x-${cfg.per}b-${cfg.phases}p-${cfg.red}r-${cfg.fail?'hard':cfg.penalty}`;
+  function renderStats(){
+    const s = stats[statKey()];
+    $('stats').innerHTML = s && s.runs
+      ? `These settings: best <b>${s.best != null ? s.best.toFixed(1)+'s' : '—'}</b> · cleared <b>${s.wins}/${s.runs}</b>`
+      : 'These settings: no runs yet';
+  }
+
+  // ---------- bars & overlay ----------
+  let bars = [];
+  function buildBars(){
+    const el = $('bars'); el.innerHTML = ''; bars = [];
+    for (let i = 0; i < cfg.phases; i++){ const d = document.createElement('div'); d.appendChild(document.createElement('i')); el.appendChild(d); bars.push(d); }
+    paintBars();
+  }
+  function paintBars(){
+    bars.forEach((d, i) => {
+      d.classList.toggle('done', i < phase || (i === phase && progress >= cfg.per));
+      d.classList.toggle('cur', i === phase && state !== 'idle');
+      d.querySelector('i').style.width = i < phase ? '100%' : i === phase ? (progress / cfg.per * 100) + '%' : '0%';
+    });
+  }
+
+  function showOverlay(title, kind, sub, btns, flash){
+    $('oBox').textContent = title; $('oBox').className = 'box' + (kind ? ' ' + kind : '');
+    $('oSub').innerHTML = sub;
+    const b = $('oBtns'); b.innerHTML = '';
+    for (const [label, fn, primary] of (btns || [[state === 'idle' ? 'Start (Enter)' : 'Again (R)', start, true]])){
+      const e = document.createElement('button'); e.textContent = label; if (primary) e.className = 'primary';
+      e.addEventListener('pointerdown', ev => ev.stopPropagation());
+      e.onclick = ev => { ev.stopPropagation(); fn(); };
+      b.appendChild(e);
+    }
+    $('overlay').classList.toggle('flash', !!flash);
+    $('overlay').classList.add('show');
+  }
+  const hideOverlay = () => $('overlay').classList.remove('show');
+
+  function toIdle(){
+    state = 'idle'; phase = 0; mistakes = 0; endTime = 0; gate = 0; holding = false;
+    resetPhase(); buildBars();
+    showOverlay('24/7 Store Safe', 'neutral',
+      `Hold left click to open the gate for <b style="color:#f2b21c">orange</b> balls, let go to block <b style="color:#ff4a3d">red</b> ones. ${cfg.phases} phase${cfg.phases>1?'s':''} × ${cfg.per} balls.`);
+    renderStats();
+  }
+
+  // ---------- loop ----------
+  function frame(){
+    const t = now();
+    const dt = Math.min(0.05, t - (lastT || t)); lastT = t;
+    step(dt);
+    const el = state === 'running' || state === 'between' ? t - t0 : endTime;
+    $('hTime').textContent = el.toFixed(1) + 's';
+    $('hPhase').textContent = `${Math.min(phase+1, cfg.phases)}/${cfg.phases}`;
+    $('hProg').textContent = `${Math.min(progress, cfg.per)}/${cfg.per}`;
+    $('hMiss').textContent = mistakes;
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- input ----------
+  const press = () => { if (state === 'running' || state === 'between') holding = true; };
+  const release = () => { holding = false; };
+  cv.addEventListener('pointerdown', e => { if (e.button !== 0 && e.pointerType === 'mouse') return; e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(_){} press(); });
+  cv.addEventListener('pointerup', release);
+  cv.addEventListener('pointercancel', release);
+  cv.addEventListener('lostpointercapture', release);
+  cv.addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('blur', release);
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space'){ e.preventDefault(); press(); }
+    else if (e.key === 'r' || e.key === 'R') start();
+    else if (e.key === 'Enter' && state === 'idle') start();
+  });
+  window.addEventListener('keyup', e => { if (e.code === 'Space') release(); });
+  $('bRestart').onclick = e => { e.currentTarget.blur(); start(); };
+
+  // ---------- settings ----------
+  const fields = [
+    ['sSpeed','vSpeed','speed', v => (+v).toFixed(2).replace(/0$/,'') + '×' + (+v === 1 ? ' (like in-game)' : '')],
+    ['sPer','vPer','per', v => v],
+    ['sPhases','vPhases','phases', v => v],
+    ['sPen','vPen','penalty', v => v == 0 ? 'none' : '−' + v + ' progress'],
+    ['sRed','vRed','red', v => v + '%'],
+  ];
+  function syncUI(){
+    for (const [s, v, k, f] of fields){ $(s).value = cfg[k]; $(v).textContent = f(cfg[k]); }
+    $('sFail').checked = cfg.fail;
+  }
+  for (const [s, v, k, f] of fields){
+    $(s).oninput = () => { $(v).textContent = f(+$(s).value); };
+    $(s).onchange = () => { cfg[k] = +$(s).value; store.set('safe.cfg', cfg); syncUI(); toIdle(); };
+  }
+  $('sFail').onchange = () => { cfg.fail = $('sFail').checked; store.set('safe.cfg', cfg); toIdle(); };
+
+  window.addEventListener('resize', resize);
+  resize(); syncUI(); toIdle(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

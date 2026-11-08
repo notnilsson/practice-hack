@@ -19,6 +19,11 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 |------|--------|-------------|
 | Align the Columns – Dark Queue Crate Hack | [`columns/`](columns/) | Click when each column's moving gap lines up with the horizontal line. Misses cost time. |
 
+### 24/7 Store Safe
+| Game | Folder | Description |
+|------|--------|-------------|
+| Ball Gate | [`safe/`](safe/) | Hold left click to open the gate for orange balls, release to block red ones. |
+
 ## Adding a game
 
 1. Put the game in its own folder as `index.html` (e.g. `lockpick/index.html`). Each game is a single self-contained HTML file.
