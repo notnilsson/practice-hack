@@ -21,7 +21,7 @@
   .back{width:var(--w);color:var(--muted);text-decoration:none;font-size:13px}
   .back:hover{color:var(--red)}
 
-  .panel{position:relative;width:var(--w);background:#1b1b1d;border:1px solid #2d2d30;border-radius:4px;padding:3.2% 6% 6%;container-type:inline-size;
+  .panel{position:relative;width:var(--w);background:#1b1b1d;border:1px solid #2d2d30;border-radius:4px;padding:calc(var(--w)*.032) calc(var(--w)*.06) calc(var(--w)*.06);container-type:inline-size;
     background-image:radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px);background-size:4px 4px}
   .mono{font-family:"Courier New",Courier,ui-monospace,monospace;font-weight:700}
 
@@ -388,7 +388,7 @@
 
   // ---------- sizing ----------
   function resize(){
-    const w = Math.max(280, Math.min(560, window.innerWidth - 32, (window.innerHeight - 170) / 1.12));
+    const w = Math.max(280, Math.min(780, window.innerWidth - 32, (window.innerHeight - 150) / 1.08));
     document.documentElement.style.setProperty('--w', Math.floor(w) + 'px');
   }
   window.addEventListener('resize', resize);

@@ -211,7 +211,7 @@
 
   // ---------- canvas sizing ----------
   function resize(){
-    const avail = Math.min(LOGICAL, window.innerWidth - 32, Math.max(260, window.innerHeight - 190));
+    const avail = Math.min(780, window.innerWidth - 32, Math.max(260, window.innerHeight - 200));
     const size = Math.max(240, Math.floor(avail));
     document.documentElement.style.setProperty('--size', size + 'px');
     const dpr = window.devicePixelRatio || 1;
