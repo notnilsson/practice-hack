@@ -7,6 +7,7 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 | Game | Folder | Description |
 |------|--------|-------------|
 | Dark Maze | [`maze/`](maze/) | Drag the ball through a maze you can only see around you and find the corner exit before time runs out. |
+| Hex Sequence | [`sequence/`](sequence/) | Enter a 4-code sequence on a 5×5 grid: 1→2 same column, 2→3 same row, 3→4 same column. |
 
 ## Adding a game
 

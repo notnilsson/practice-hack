@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hex Sequence Practice</title>
+<style>
+  :root{
+    --w:560px;
+    --red:#d3133f;
+    --red-dim:#8e1230;
+    --yellow:#f3c234;
+    --text:#dcdcdc;
+    --muted:#8b8b8b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:var(--text);
+    font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(ellipse at 50% 30%,#1c1d22 0%,#0c0d10 65%,#08090b 100%);background-attachment:fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .back{width:var(--w);color:var(--muted);text-decoration:none;font-size:13px}
+  .back:hover{color:var(--red)}
+
+  .panel{position:relative;width:var(--w);background:#1b1b1d;border:1px solid #2d2d30;border-radius:4px;padding:3.2% 6% 6%;container-type:inline-size;
+    background-image:radial-gradient(rgba(255,255,255,.025) 1px,transparent 1px);background-size:4px 4px}
+  .mono{font-family:"Courier New",Courier,ui-monospace,monospace;font-weight:700}
+
+  .target{display:flex;justify-content:center;gap:1cqw}
+  .target div{width:7cqw;height:5cqw;display:flex;align-items:center;justify-content:center;border:1px solid var(--red-dim);border-radius:3px;color:var(--red);font-size:2.4cqw;transition:background .15s,color .15s}
+  .target div.done{background:var(--red);border-color:var(--red);color:#fff}
+  .pips{display:flex;justify-content:center;gap:.8cqw;margin:1.2cqw 0 4cqw}
+  .pips div{width:3.6cqw;height:1.2cqw;border:1px solid var(--red-dim);border-radius:2cqw}
+  .pips div.done{background:var(--red);border-color:var(--red)}
+
+  .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:2.2cqw}
+  .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--red);border-radius:3px;background:rgba(40,12,20,.25);color:var(--red);font-size:4.4cqw;cursor:pointer;user-select:none;position:relative;
+    transition:border-color .08s,color .08s,background .08s,opacity .15s}
+  .cell.hover{background:radial-gradient(circle,rgba(160,20,50,.45),rgba(90,10,30,.25))}
+  .cell.line{border-color:var(--yellow);color:var(--yellow)}
+  .cell.picked{background:radial-gradient(circle,rgba(190,25,60,.55),rgba(110,12,35,.4));color:#fff;border-color:var(--red)}
+  .cell.dim{opacity:.28}
+  .cell.wrong{background:#ff2a4d;color:#fff;border-color:#ff2a4d}
+  .cell .n{position:absolute;top:4%;right:7%;font-size:2.2cqw;color:#fff;opacity:.9;font-family:system-ui,sans-serif}
+  .cell.sol{border-color:#4be08a;color:#4be08a}
+
+  .bars{width:var(--w);display:flex;gap:6px;margin-top:2px}
+  .bars div{flex:1;height:8px;background:#58555a;border-radius:2px;overflow:hidden;position:relative}
+  .bars div.cur{background:#77727a}
+  .bars div.failed{background:#e0798d}
+  .bars i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--red)}
+  .bars div.done i{width:100%}
+
+  .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:rgba(5,5,6,.82);border-radius:4px;text-align:center;padding:20px}
+  .overlay.show{display:flex}
+  .overlay.see{background:rgba(5,5,6,.35)}
+  .box{border:1px solid var(--red);border-radius:4px;padding:10px 18px;color:var(--red);font-size:15px;background:#120a0c}
+  .box.win{border-color:#4be08a;color:#4be08a;background:#0a120d}
+  .sub{color:#aaa;font-size:13px;font-variant-numeric:tabular-nums;max-width:90%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#a3102f;border-color:#d3133f;color:#fff}
+  button.primary:hover{background:#bd1338}
+
+  .row{width:var(--w);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  .hud{width:var(--w);display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .hud b{color:var(--text);font-weight:600}
+
+  details{width:var(--w);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,20,22,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;padding:4px 12px 14px}
+  .settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .settings label b{color:var(--text);font-weight:600}
+  .settings input[type=range]{width:100%;accent-color:#d3133f}
+  .settings .check{flex-direction:row;align-items:center;gap:8px;color:#bbb}
+  .settings .check input{accent-color:#d3133f}
+  .rules{grid-column:1/-1;color:#8a8a8a;font-size:12px;line-height:1.5;border-top:1px solid #262626;padding-top:10px}
+  .rules b{color:#cfcfcf}
+  @media (max-width:520px){.settings{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">&larr; All games</a>
+  <div class="hud">
+    <span>Stage <b id="hStage">1/3</b></span>
+    <span>Time left <b id="hTime">60.0s</b></span>
+  </div>
+
+  <div class="panel" id="panel">
+    <div class="target mono" id="target"></div>
+    <div class="pips" id="pips"></div>
+    <div class="grid mono" id="grid"></div>
+
+    <div class="overlay" id="overlay">
+      <div class="box mono" id="oBox"></div>
+      <div class="sub" id="oSub"></div>
+      <div class="btns" id="oBtns"></div>
+    </div>
+  </div>
+
+  <div class="bars" id="bars"></div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>Practice settings &amp; rules</summary>
+    <div class="settings">
+      <label><span>Time per stage <b id="vTime"></b></span><input id="sTime" type="range" min="5" max="90" step="5"></label>
+      <label><span>Stages <b id="vStages"></b></span><input id="sStages" type="range" min="1" max="6" step="1"></label>
+      <label class="check"><input id="sHelp" type="checkbox"> Learning mode: dim cells you're not allowed to pick</label>
+      <label class="check"><input id="sSolve" type="checkbox"> Show the solution after a fail</label>
+      <div class="rules">
+        <b>How to solve:</b> enter the 4 codes shown at the top, in order.
+        Pick <b>1 → 2</b> in the same <b>column</b>, <b>2 → 3</b> in the same <b>row</b>, <b>3 → 4</b> in the same <b>column</b>.
+        The picks don't need to be next to each other. Any wrong click fails the stage.
+        Hovering a cell lights up (yellow) the line your next pick must come from.
+        Keys: R = restart, Enter = start.
+      </div>
+    </div>
+  </details>
+</main>
+
+<script>
+(() => {
+  const CODES = ['FF','E9','BD','1C','55','7A'];
+  const N = 5;
+  const DEFAULTS = {time:60, stages:3, help:false, solve:true};
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let cfg = Object.assign({}, DEFAULTS, store.get('seq.cfg', {}));
+  let stats = store.get('seq.stats', {});
+
+  const $ = id => document.getElementById(id);
+  const gridEl = $('grid'), targetEl = $('target'), pipsEl = $('pips'), barsEl = $('bars');
+
+  let state = 'idle';        // idle | running | between | failed | won
+  let stage = 0, target = [], grid = [], picks = [], hovered = -1;
+  let stageStart = 0, totalTime = 0, failedReason = '';
+  let cells = [], tCells = [], pips = [], bars = [];
+
+  const rc = i => [Math.floor(i / N), i % N];
+
+  // Direction rule: after pick k (0-based), pick k+1 must be in the same column (k even) or row (k odd)
+  const dirAfter = k => (k % 2 === 0) ? 'col' : 'row';
+  const sameLine = (a, b, dir) => dir === 'col' ? a % N === b % N : Math.floor(a / N) === Math.floor(b / N);
+
+  function isValid(idx, seq, g, ps){
+    const k = ps.length;
+    if (ps.includes(idx) || g[idx] !== seq[k]) return false;
+    if (k === 0) return true;
+    return sameLine(ps[k-1], idx, dirAfter(k-1));
+  }
+
+  function solutions(seq, g){
+    const out = [];
+    const rec = ps => {
+      if (ps.length === seq.length){ out.push(ps.slice()); return; }
+      for (let i = 0; i < N*N; i++) if (isValid(i, seq, g, ps)){ ps.push(i); rec(ps); ps.pop(); }
+    };
+    rec([]);
+    return out;
+  }
+
+  // Grid heavy with target codes (like the real one) but always solvable
+  function makeStage(){
+    for (let tries = 0; tries < 5000; tries++){
+      const seq = Array.from({length:4}, () => CODES[Math.random()*CODES.length|0]);
+      const uniq = [...new Set(seq)];
+      const g = Array.from({length:N*N}, () =>
+        Math.random() < 0.62 ? uniq[Math.random()*uniq.length|0] : CODES[Math.random()*CODES.length|0]);
+      const sols = solutions(seq, g);
+      if (sols.length >= 1 && sols.length <= 6) return {seq, g, sols};
+    }
+    return null;
+  }
+
+  // ---------- build DOM ----------
+  for (let i = 0; i < 4; i++){
+    const t = document.createElement('div'); targetEl.appendChild(t); tCells.push(t);
+    const p = document.createElement('div'); pipsEl.appendChild(p); pips.push(p);
+  }
+  for (let i = 0; i < N*N; i++){
+    const c = document.createElement('div');
+    c.className = 'cell';
+    c.addEventListener('mouseenter', () => { hovered = i; paint(); });
+    c.addEventListener('mouseleave', () => { if (hovered === i){ hovered = -1; paint(); } });
+    c.addEventListener('click', () => pick(i));
+    gridEl.appendChild(c); cells.push(c);
+  }
+  function buildBars(){
+    barsEl.innerHTML = ''; bars = [];
+    for (let s = 0; s < cfg.stages; s++){
+      const d = document.createElement('div'); d.appendChild(document.createElement('i'));
+      barsEl.appendChild(d); bars.push(d);
+    }
+  }
+
+  let current = null;
+  function loadStage(){
+    current = makeStage();
+    target = current.seq; grid = current.g; picks = []; hovered = -1;
+    cells.forEach((c, i) => { c.textContent = grid[i]; });
+    tCells.forEach((t, i) => t.textContent = target[i]);
+    stageStart = performance.now();
+    paint();
+  }
+
+  function paint(){
+    const k = picks.length;
+    const playing = state === 'running';
+    // allowed line for learning mode
+    let allowedLine = null;
+    if (k > 0 && k < 4) allowedLine = {from: picks[k-1], dir: dirAfter(k-1)};
+    // hover line: through hovered cell, in direction of the pick after it
+    let hoverLine = null;
+    if (playing && hovered >= 0 && k < 3) hoverLine = {from: hovered, dir: dirAfter(k)};
+    cells.forEach((c, i) => {
+      const picked = picks.includes(i);
+      c.classList.toggle('picked', picked);
+      c.classList.toggle('hover', playing && i === hovered && !picked);
+      c.classList.toggle('line', !!hoverLine && !picked && sameLine(hoverLine.from, i, hoverLine.dir));
+      c.classList.toggle('dim', playing && cfg.help && !!allowedLine && !picked && !sameLine(allowedLine.from, i, allowedLine.dir));
+      c.style.cursor = playing ? 'pointer' : 'default';
+    });
+    tCells.forEach((t, i) => t.classList.toggle('done', i < k));
+    pips.forEach((p, i) => p.classList.toggle('done', i < k));
+  }
+
+  function clearMarks(){
+    cells.forEach(c => { c.classList.remove('wrong','sol'); const n = c.querySelector('.n'); if (n) n.remove(); });
+  }
+
+  // ---------- flow ----------
+  function showOverlay(html, sub, buttons, see){
+    $('oBox').className = 'box mono' + (html.win ? ' win' : '');
+    $('oBox').textContent = html.text;
+    $('oSub').innerHTML = sub || '';
+    const b = $('oBtns'); b.innerHTML = '';
+    for (const [label, fn, primary] of buttons){
+      const e = document.createElement('button'); e.textContent = label; if (primary) e.className = 'primary';
+      e.onclick = fn; b.appendChild(e);
+    }
+    $('overlay').classList.toggle('see', !!see);
+    $('overlay').classList.add('show');
+  }
+  const hideOverlay = () => $('overlay').classList.remove('show');
+
+  function toIdle(){
+    state = 'idle'; stage = 0; totalTime = 0;
+    buildBars(); clearMarks(); loadStage();
+    stageStart = performance.now();
+    showOverlay({text:'Hack the server'}, `Enter the 4 codes at the top. ${cfg.stages} stage${cfg.stages>1?'s':''}, ${cfg.time}s each.`,
+      [['Start (Enter)', start, true]]);
+    renderStats();
+  }
+
+  function start(){
+    hideOverlay(); clearMarks();
+    state = 'running'; stage = 0; totalTime = 0;
+    buildBars(); loadStage();
+  }
+
+  function pick(i){
+    if (state !== 'running') return;
+    if (picks.includes(i)) return;
+    if (!isValid(i, target, grid, picks)){
+      cells[i].classList.add('wrong');
+      const k = picks.length;
+      let why;
+      if (grid[i] !== target[k]) why = `You clicked <b>${grid[i]}</b> but pick ${k+1} needed <b>${target[k]}</b>.`;
+      else why = `Pick ${k+1} had to be in the same <b>${dirAfter(k-1) === 'col' ? 'column' : 'row'}</b> as pick ${k}.`;
+      fail(why);
+      return;
+    }
+    picks.push(i);
+    paint();
+    if (picks.length === 4){
+      totalTime += (performance.now() - stageStart) / 1000;
+      bars[stage].classList.remove('cur'); bars[stage].classList.add('done');
+      bars[stage].querySelector('i').style.width = '100%';
+      if (stage + 1 >= cfg.stages) return win();
+      state = 'between';
+      setTimeout(() => { if (state !== 'between') return; stage++; state = 'running'; loadStage(); }, 450);
+    }
+  }
+
+  function revealSolution(){
+    if (!cfg.solve) return;
+    // prefer a solution that continues the player's correct picks
+    const sols = solutions(target, grid);
+    const best = sols.find(s => picks.every((p, j) => s[j] === p)) || sols[0];
+    if (!best) return;
+    best.forEach((idx, j) => {
+      const c = cells[idx]; c.classList.add('sol');
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = j + 1; c.appendChild(n);
+    });
+  }
+
+  function fail(why){
+    state = 'failed';
+    bars[stage].classList.add('failed');
+    record(false);
+    revealSolution();
+    hovered = -1; paint();
+    setTimeout(() => {
+      showOverlay({text:'Stage failed!'}, why + (cfg.solve ? '<br>One valid solution is shown in green.' : ''),
+        [['Look at the board', () => { hideOverlay(); }], ['Try again (R)', start, true]]);
+    }, 350);
+  }
+
+  function win(){
+    state = 'won';
+    const pb = record(true);
+    hovered = -1; paint();
+    showOverlay({text:'Hack successful!', win:true},
+      `All ${cfg.stages} stages in <b>${totalTime.toFixed(1)}s</b>${pb ? ' · new best!' : ''}`,
+      [['Again (R)', start, true]]);
+  }
+
+  function record(won){
+    const key = `${cfg.stages}x${cfg.time}`;
+    const s = stats[key] || (stats[key] = {runs:0, wins:0, best:null});
+    s.runs++;
+    let pb = false;
+    if (won){ s.wins++; if (s.best == null || totalTime < s.best){ s.best = totalTime; pb = true; } }
+    store.set('seq.stats', stats);
+    renderStats();
+    return pb;
+  }
+
+  function renderStats(){
+    const s = stats[`${cfg.stages}x${cfg.time}`];
+    $('stats').innerHTML = s && s.runs
+      ? `${cfg.stages} stages · ${cfg.time}s: best <b>${s.best != null ? s.best.toFixed(1)+'s' : '—'}</b> · cleared <b>${s.wins}/${s.runs}</b>`
+      : `${cfg.stages} stages · ${cfg.time}s: no runs yet`;
+  }
+
+  // ---------- timer loop ----------
+  function tick(){
+    const now = performance.now();
+    let left = cfg.time;
+    if (state === 'running' || state === 'between'){
+      const el = (now - stageStart) / 1000;
+      left = Math.max(0, cfg.time - el);
+      if (state === 'running'){
+        bars.forEach((b, s) => b.classList.toggle('cur', s === stage));
+        bars[stage].querySelector('i').style.width = Math.min(100, el / cfg.time * 100) + '%';
+        if (el >= cfg.time) fail("Time's up.");
+      }
+    } else if (state === 'failed') left = 0;
+    $('hTime').textContent = left.toFixed(1) + 's';
+    $('hStage').textContent = `${Math.min(stage+1, cfg.stages)}/${cfg.stages}`;
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- settings ----------
+  function syncUI(){
+    $('sTime').value = cfg.time; $('vTime').textContent = cfg.time + 's';
+    $('sStages').value = cfg.stages; $('vStages').textContent = cfg.stages;
+    $('sHelp').checked = cfg.help; $('sSolve').checked = cfg.solve;
+  }
+  function readUI(restart){
+    cfg = {time:+$('sTime').value, stages:+$('sStages').value, help:$('sHelp').checked, solve:$('sSolve').checked};
+    store.set('seq.cfg', cfg); syncUI();
+    if (restart) toIdle(); else paint();
+  }
+  $('sTime').oninput = () => { $('vTime').textContent = $('sTime').value + 's'; };
+  $('sStages').oninput = () => { $('vStages').textContent = $('sStages').value; };
+  $('sTime').onchange = () => readUI(true);
+  $('sStages').onchange = () => readUI(true);
+  $('sHelp').onchange = () => readUI(false);
+  $('sSolve').onchange = () => readUI(false);
+
+  $('bRestart').onclick = start;
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'r' || e.key === 'R') start();
+    if (e.key === 'Enter' && state === 'idle') start();
+  });
+
+  // ---------- sizing ----------
+  function resize(){
+    const w = Math.max(280, Math.min(560, window.innerWidth - 32, (window.innerHeight - 170) / 1.12));
+    document.documentElement.style.setProperty('--w', Math.floor(w) + 'px');
+  }
+  window.addEventListener('resize', resize);
+
+  resize(); syncUI(); toIdle(); requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
