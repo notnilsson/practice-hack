@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maze Minigame Practice</title>
+<style>
+  :root{
+    --size:570px;
+    --wall:#ffb000;
+    --text:#dcdcdc;
+    --muted:#8b8b8b;
+    --red:#ff3b3b;
+    --line:#2b2b2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:var(--text);
+    font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(ellipse at 50% 35%,#1b1e23 0%,#0c0d10 65%,#08090b 100%);background-attachment:fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .hud{width:var(--size);display:flex;justify-content:space-between;align-items:baseline;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .hud b{color:var(--text);font-weight:600}
+  .board{position:relative;width:var(--size);height:var(--size)}
+  canvas{display:block;width:100%;height:100%;border:1px solid #3b3427;border-radius:3px;touch-action:none;transition:border-color .12s, box-shadow .12s;background:#111}
+  canvas.hit{border-color:var(--red);box-shadow:0 0 0 1px rgba(255,59,59,.35)}
+  canvas.grab{cursor:grab}
+  canvas.dragging{cursor:grabbing}
+  .bar{width:var(--size);height:8px;background:#58555a;border-radius:2px;overflow:hidden}
+  .bar>div{height:100%;width:0;background:var(--red)}
+  .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;background:rgba(8,8,10,.55);border-radius:3px}
+  .overlay.show{display:flex}
+  .overlay .title{font-size:24px;font-weight:700;letter-spacing:.2px}
+  .overlay .title.win{color:#5be38b}
+  .overlay .title.lose{color:var(--red)}
+  .overlay .sub{color:#bbb;font-size:14px;font-variant-numeric:tabular-nums}
+  .overlay .btns{display:flex;gap:8px;margin-top:10px}
+  .hint{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:#9a9a9a;font-size:12px;pointer-events:none;transition:opacity .3s}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#b37a00;border-color:#d79400;color:#fff}
+  button.primary:hover{background:#c88900}
+  .row{width:var(--size);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .row .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .row .stats b{color:var(--text);font-weight:600}
+  details{width:var(--size);border:1px solid var(--line);border-radius:8px;background:rgba(20,20,22,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;padding:4px 12px 14px}
+  .settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .settings label span b{color:var(--text);font-weight:600}
+  .settings input[type=range]{width:100%;accent-color:#d79400}
+  .settings select{font:inherit;background:#1d1d20;color:#ddd;border:1px solid #444;border-radius:5px;padding:4px 6px}
+  .settings .check{flex-direction:row;align-items:center;gap:8px;color:#bbb}
+  .settings .check input{accent-color:#d79400}
+  .keys{grid-column:1/-1;color:#6f6f6f;font-size:11.5px}
+  .back{width:var(--size);color:#8b8b8b;text-decoration:none;font-size:13px}
+  .back:hover{color:#ffb000}
+  @media (max-width:520px){.settings{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="../">&larr; All games</a>
+  <div class="hud">
+    <span>Time left <b id="tLeft">50.0s</b></span>
+    <span>Wall hits <b id="tHits">0</b></span>
+  </div>
+
+  <div class="board" id="board">
+    <canvas id="cv"></canvas>
+    <div class="hint" id="hint">Grab the ball and drag it to the exit — it's in one of the corners</div>
+    <div class="overlay" id="overlay">
+      <div class="title" id="oTitle"></div>
+      <div class="sub" id="oSub"></div>
+      <div class="btns">
+        <button id="oSame">Retry same maze (T)</button>
+        <button class="primary" id="oNew">New maze (R)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="bar"><div id="barFill"></div></div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <div style="display:flex;gap:8px">
+      <button id="bSame">Retry (T)</button>
+      <button id="bNew">New maze (R)</button>
+    </div>
+  </div>
+
+  <details id="det">
+    <summary>Practice settings</summary>
+    <div class="settings">
+      <label>Grid size
+        <select id="sN">
+          <option value="11">11 × 11</option>
+          <option value="13">13 × 13</option>
+          <option value="15">15 × 15 (as in clip)</option>
+          <option value="17">17 × 17</option>
+          <option value="21">21 × 21</option>
+        </select>
+      </label>
+      <label><span>Time limit <b id="vTime"></b></span><input id="sTime" type="range" min="15" max="120" step="5"></label>
+      <label><span>Wall-hit penalty <b id="vPen"></b></span><input id="sPen" type="range" min="0" max="10" step="0.5"></label>
+      <label><span>Light radius <b id="vLight"></b></span><input id="sLight" type="range" min="1.5" max="6" step="0.25"></label>
+      <label class="check"><input id="sRand" type="checkbox"> Random start corner (off = always top-right, like the clip)</label>
+      <label class="check"><input id="sReveal" type="checkbox"> Show the whole maze (learning mode)</label>
+      <div class="keys">Keys: R = new maze · T = retry same maze. Timer starts when you first grab the ball. Settings changes start a new maze.</div>
+    </div>
+  </details>
+</main>
+
+<script>
+(() => {
+  const LOGICAL = 570, PAD = 3, WALL_T = 3;
+  const HIT_COOLDOWN = 700, FLASH_MS = 300;
+  const DEFAULTS = {n:15, time:50, penalty:5, light:3.5, rand:true, reveal:false};
+
+  const store = {
+    get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let cfg = Object.assign({}, DEFAULTS, store.get('maze.cfg', {}));
+  let stats = store.get('maze.stats', {});
+
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const bgC = document.createElement('canvas'), bgX = bgC.getContext('2d');
+  const wallC = document.createElement('canvas'), wallX = wallC.getContext('2d');
+  const litC = document.createElement('canvas'), litX = litC.getContext('2d');
+
+  let n, cell, ballR, maze, rects, startCorner, exitCorner, ball, target;
+  let state = 'ready';   // ready | running | won | lost
+  let elapsedBase = 0, runStart = 0, penaltyTotal = 0, hits = 0, lastHit = -1e9, flashUntil = 0;
+  let dragging = false, pxScale = 1;
+
+  // ---------- maze generation (recursive backtracker → long winding corridors) ----------
+  function generate(size){
+    const right = [], down = [], seen = [];
+    for (let r = 0; r < size; r++){ right.push(Array(size).fill(true)); down.push(Array(size).fill(true)); seen.push(Array(size).fill(false)); }
+    const sr = Math.random()*size|0, sc = Math.random()*size|0;
+    const stack = [[sr, sc]]; seen[sr][sc] = true;
+    while (stack.length){
+      const [r, c] = stack[stack.length-1];
+      const nb = [];
+      if (r > 0 && !seen[r-1][c]) nb.push([r-1, c]);
+      if (r < size-1 && !seen[r+1][c]) nb.push([r+1, c]);
+      if (c > 0 && !seen[r][c-1]) nb.push([r, c-1]);
+      if (c < size-1 && !seen[r][c+1]) nb.push([r, c+1]);
+      if (!nb.length){ stack.pop(); continue; }
+      const [nr, nc] = nb[Math.random()*nb.length|0];
+      if (nr < r) down[nr][nc] = false;
+      else if (nr > r) down[r][c] = false;
+      else if (nc < c) right[nr][nc] = false;
+      else right[r][c] = false;
+      seen[nr][nc] = true; stack.push([nr, nc]);
+    }
+    return {right, down};
+  }
+
+  // Wall segments as line segments (merged where collinear) in logical coords
+  function buildSegments(){
+    const segs = [];
+    const X = c => PAD + c*cell, Y = r => PAD + r*cell;
+    // horizontal walls: line y = r (r = 0..n)
+    for (let r = 0; r <= n; r++){
+      let runStartC = -1;
+      for (let c = 0; c <= n; c++){
+        const wall = c < n && (r === 0 || r === n || maze.down[r-1][c]);
+        if (wall && runStartC < 0) runStartC = c;
+        if (!wall && runStartC >= 0){ segs.push([X(runStartC), Y(r), X(c), Y(r)]); runStartC = -1; }
+      }
+    }
+    // vertical walls: line x = c (c = 0..n)
+    for (let c = 0; c <= n; c++){
+      let runStartR = -1;
+      for (let r = 0; r <= n; r++){
+        const wall = r < n && (c === 0 || c === n || maze.right[r][c-1]);
+        if (wall && runStartR < 0) runStartR = r;
+        if (!wall && runStartR >= 0){ segs.push([X(c), Y(runStartR), X(c), Y(r)]); runStartR = -1; }
+      }
+    }
+    return segs;
+  }
+
+  const cornerCell = k => [[0,0],[0,n-1],[n-1,n-1],[n-1,0]][k]; // TL, TR, BR, BL  ([row, col])
+  const cellCenter = ([r, c]) => [PAD + (c+.5)*cell, PAD + (r+.5)*cell];
+
+  // ---------- setup ----------
+  let segs = [];
+  function newMaze(keepLayout){
+    n = cfg.n;
+    cell = (LOGICAL - 2*PAD) / n;
+    ballR = Math.max(4.5, cell * 0.185);
+    if (!keepLayout){
+      maze = generate(n);
+      startCorner = cfg.rand ? (Math.random()*4|0) : 1;
+      const others = [0,1,2,3].filter(k => k !== startCorner);
+      exitCorner = others[Math.random()*3|0];
+      segs = buildSegments();
+      rects = segs.map(([x1,y1,x2,y2]) => [Math.min(x1,x2)-WALL_T/2, Math.min(y1,y2)-WALL_T/2, Math.max(x1,x2)+WALL_T/2, Math.max(y1,y2)+WALL_T/2]);
+    }
+    const [sx, sy] = cellCenter(cornerCell(startCorner));
+    ball = {x: sx, y: sy}; target = {x: sx, y: sy};
+    state = 'ready'; elapsedBase = 0; penaltyTotal = 0; hits = 0; lastHit = -1e9; flashUntil = 0; dragging = false;
+    $('overlay').classList.remove('show');
+    $('hint').style.opacity = 1;
+    renderWallLayer();
+    updateHud(); renderStats();
+  }
+
+  // ---------- canvas sizing ----------
+  function resize(){
+    const avail = Math.min(LOGICAL, window.innerWidth - 32, Math.max(260, window.innerHeight - 190));
+    const size = Math.max(240, Math.floor(avail));
+    document.documentElement.style.setProperty('--size', size + 'px');
+    const dpr = window.devicePixelRatio || 1;
+    pxScale = size / LOGICAL * dpr;
+    for (const c of [cv, bgC, wallC, litC]){ c.width = Math.round(size*dpr); c.height = Math.round(size*dpr); }
+    renderBg();
+    if (maze) renderWallLayer();
+  }
+
+  function renderBg(){
+    bgX.setTransform(1,0,0,1,0,0);
+    bgX.fillStyle = '#121212'; bgX.fillRect(0,0,bgC.width,bgC.height);
+    bgX.setTransform(pxScale,0,0,pxScale,0,0);
+    // faint mesh texture like the in-game panel
+    bgX.fillStyle = 'rgba(255,255,255,0.035)';
+    for (let y = 0; y < LOGICAL; y += 4) for (let x = (y/4)%2 ? 2 : 0; x < LOGICAL; x += 4) bgX.fillRect(x, y, 1, 1);
+  }
+
+  function renderWallLayer(){
+    wallX.setTransform(1,0,0,1,0,0);
+    wallX.clearRect(0,0,wallC.width,wallC.height);
+    wallX.setTransform(pxScale,0,0,pxScale,0,0);
+    // start marker (red square)
+    const ms = cell*0.62;
+    let [cx, cy] = cellCenter(cornerCell(startCorner));
+    wallX.fillStyle = '#ff2b2b';
+    roundRect(wallX, cx-ms/2, cy-ms/2, ms, ms, 2); wallX.fill();
+    // exit marker (green, glowing)
+    [cx, cy] = cellCenter(cornerCell(exitCorner));
+    wallX.save();
+    wallX.shadowColor = 'rgba(70,255,140,.9)'; wallX.shadowBlur = 14;
+    wallX.fillStyle = '#39e47a';
+    roundRect(wallX, cx-ms/2, cy-ms/2, ms, ms, 2); wallX.fill();
+    wallX.restore();
+    // walls with glow
+    wallX.lineCap = 'round';
+    wallX.save();
+    wallX.strokeStyle = 'rgba(255,170,0,.55)'; wallX.lineWidth = WALL_T + 1;
+    wallX.shadowColor = 'rgba(255,160,0,.85)'; wallX.shadowBlur = 10;
+    strokeSegs(wallX);
+    wallX.restore();
+    wallX.strokeStyle = '#ffb40a'; wallX.lineWidth = WALL_T;
+    strokeSegs(wallX);
+    wallX.strokeStyle = 'rgba(255,230,150,.55)'; wallX.lineWidth = 1;
+    strokeSegs(wallX);
+  }
+  function strokeSegs(g){
+    g.beginPath();
+    for (const [x1,y1,x2,y2] of segs){ g.moveTo(x1,y1); g.lineTo(x2,y2); }
+    g.stroke();
+  }
+  function roundRect(g, x, y, w, h, r){
+    g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+  }
+
+  // ---------- physics ----------
+  function collides(x, y, list){
+    const r2 = ballR*ballR;
+    for (const [x0,y0,x1,y1] of list){
+      const cx = x < x0 ? x0 : x > x1 ? x1 : x;
+      const cy = y < y0 ? y0 : y > y1 ? y1 : y;
+      const dx = x-cx, dy = y-cy;
+      if (dx*dx + dy*dy < r2) return true;
+    }
+    return false;
+  }
+
+  function stepBall(){
+    const dx = target.x - ball.x, dy = target.y - ball.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.05) return;
+    const travel = Math.min(dist, 260);
+    // only check walls near the path
+    const m = ballR + 2;
+    const bx0 = Math.min(ball.x, ball.x + dx/dist*travel) - m, bx1 = Math.max(ball.x, ball.x + dx/dist*travel) + m;
+    const by0 = Math.min(ball.y, ball.y + dy/dist*travel) - m, by1 = Math.max(ball.y, ball.y + dy/dist*travel) + m;
+    const near = rects.filter(([x0,y0,x1,y1]) => x1 > bx0 && x0 < bx1 && y1 > by0 && y0 < by1);
+    const steps = Math.ceil(travel / 0.75);
+    const sx = dx/dist*travel/steps, sy = dy/dist*travel/steps;
+    let blocked = false;
+    for (let i = 0; i < steps; i++){
+      const nx = ball.x + sx, ny = ball.y + sy;
+      if (!collides(nx, ny, near)){ ball.x = nx; ball.y = ny; continue; }
+      blocked = true;
+      if (Math.abs(sx) > 1e-4 && !collides(ball.x + sx, ball.y, near)) ball.x += sx;
+      else if (Math.abs(sy) > 1e-4 && !collides(ball.x, ball.y + sy, near)) ball.y += sy;
+      else break;
+    }
+    if (blocked) wallHit();
+  }
+
+  function wallHit(){
+    const now = performance.now();
+    if (state !== 'running' || now - lastHit < HIT_COOLDOWN) return;
+    lastHit = now; hits++; penaltyTotal += cfg.penalty;
+    flashUntil = now + FLASH_MS;
+  }
+
+  // ---------- timing / state ----------
+  const usedTime = () => state === 'ready' ? 0 :
+    state === 'running' ? (performance.now() - runStart)/1000 + penaltyTotal : elapsedBase;
+
+  function finish(won){
+    elapsedBase = usedTime();
+    state = won ? 'won' : 'lost';
+    dragging = false;
+    cv.classList.remove('dragging');
+    const key = String(cfg.n);
+    const s = stats[key] || (stats[key] = {runs:0, wins:0, best:null});
+    s.runs++;
+    let pb = false;
+    if (won){ s.wins++; if (s.best == null || elapsedBase < s.best){ s.best = elapsedBase; pb = true; } }
+    store.set('maze.stats', stats);
+    $('oTitle').textContent = won ? 'Escaped!' : "Time's up";
+    $('oTitle').className = 'title ' + (won ? 'win' : 'lose');
+    $('oSub').textContent = won
+      ? `${elapsedBase.toFixed(1)}s used of ${cfg.time}s · ${hits} wall hit${hits===1?'':'s'}${pb ? ' · new best!' : ''}`
+      : `${hits} wall hit${hits===1?'':'s'} · the exit is shown in green`;
+    $('overlay').classList.add('show');
+    renderStats();
+  }
+
+  function updateHud(){
+    const used = Math.min(usedTime(), cfg.time);
+    $('tLeft').textContent = Math.max(0, cfg.time - used).toFixed(1) + 's';
+    $('tHits').textContent = hits;
+    $('barFill').style.width = (used / cfg.time * 100) + '%';
+  }
+
+  function renderStats(){
+    const s = stats[String(cfg.n)];
+    $('stats').innerHTML = s && s.runs
+      ? `${cfg.n}×${cfg.n}: best <b>${s.best != null ? s.best.toFixed(1)+'s' : '—'}</b> · escaped <b>${s.wins}/${s.runs}</b>`
+      : `${cfg.n}×${cfg.n}: no runs yet`;
+  }
+
+  // ---------- render loop ----------
+  function frame(){
+    const now = performance.now();
+    if (state === 'running'){
+      if (dragging) stepBall();
+      const [ex, ey] = cellCenter(cornerCell(exitCorner));
+      if (Math.hypot(ball.x-ex, ball.y-ey) < cell*0.33) finish(true);
+      else if (usedTime() >= cfg.time) finish(false);
+    }
+    cv.classList.toggle('hit', now < flashUntil);
+    updateHud();
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function draw(){
+    const W = cv.width, H = cv.height;
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(bgC, 0, 0);
+    const ended = state === 'won' || state === 'lost';
+    const inner = cell * cfg.light * 0.6, outer = cell * cfg.light;
+
+    // soft halo on the floor around the ball
+    ctx.setTransform(pxScale,0,0,pxScale,0,0);
+    const halo = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, outer*1.05);
+    halo.addColorStop(0, 'rgba(255,255,255,0.075)'); halo.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = halo; ctx.fillRect(0, 0, LOGICAL, LOGICAL);
+
+    if (cfg.reveal || ended){
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.globalAlpha = ended && !cfg.reveal ? 0.6 : 0.85;
+      ctx.drawImage(wallC, 0, 0);
+      ctx.globalAlpha = 1;
+    }
+    // lit area: walls masked by a radial falloff
+    litX.setTransform(1,0,0,1,0,0);
+    litX.globalCompositeOperation = 'source-over';
+    litX.clearRect(0,0,W,H);
+    litX.drawImage(wallC, 0, 0);
+    litX.globalCompositeOperation = 'destination-in';
+    litX.setTransform(pxScale,0,0,pxScale,0,0);
+    const g = litX.createRadialGradient(ball.x, ball.y, inner, ball.x, ball.y, outer);
+    g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    litX.fillStyle = g; litX.fillRect(0, 0, LOGICAL, LOGICAL);
+    litX.globalCompositeOperation = 'source-over';
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.drawImage(litC, 0, 0);
+
+    // ball
+    ctx.setTransform(pxScale,0,0,pxScale,0,0);
+    ctx.save();
+    ctx.shadowColor = 'rgba(255,255,255,.7)'; ctx.shadowBlur = 8;
+    ctx.fillStyle = '#f4f4f4';
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ballR, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(ball.x, ball.y, ballR*0.45, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // ---------- input ----------
+  function toLogical(e){
+    const r = cv.getBoundingClientRect();
+    return {x: (e.clientX - r.left) / r.width * LOGICAL, y: (e.clientY - r.top) / r.height * LOGICAL};
+  }
+  const nearBall = p => Math.hypot(p.x-ball.x, p.y-ball.y) <= ballR + Math.max(10, cell*0.3);
+
+  cv.addEventListener('pointerdown', e => {
+    if (state === 'won' || state === 'lost') return;
+    const p = toLogical(e);
+    if (!nearBall(p)) return;
+    e.preventDefault();
+    try{ cv.setPointerCapture(e.pointerId); }catch(_){}
+    dragging = true;
+    // grab offset: keep the ball where it is, follow pointer deltas
+    target = {x: ball.x, y: ball.y};
+    grabOffset = {x: ball.x - p.x, y: ball.y - p.y};
+    cv.classList.add('dragging');
+    if (state === 'ready'){ state = 'running'; runStart = performance.now(); $('hint').style.opacity = 0; }
+  });
+  let grabOffset = {x:0, y:0};
+  cv.addEventListener('pointermove', e => {
+    const p = toLogical(e);
+    if (dragging){ target = {x: p.x + grabOffset.x, y: p.y + grabOffset.y}; }
+    else cv.classList.toggle('grab', state !== 'won' && state !== 'lost' && nearBall(p));
+  });
+  const release = () => { dragging = false; cv.classList.remove('dragging'); target = {x: ball.x, y: ball.y}; };
+  cv.addEventListener('pointerup', release);
+  cv.addEventListener('pointercancel', release);
+  cv.addEventListener('lostpointercapture', release);
+
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'r' || e.key === 'R') newMaze(false);
+    if (e.key === 't' || e.key === 'T') newMaze(true);
+  });
+  $('oNew').onclick = $('bNew').onclick = () => newMaze(false);
+  $('oSame').onclick = $('bSame').onclick = () => newMaze(true);
+
+  // ---------- settings ----------
+  function syncSettingsUI(){
+    $('sN').value = String(cfg.n);
+    $('sTime').value = cfg.time; $('vTime').textContent = cfg.time + 's';
+    $('sPen').value = cfg.penalty; $('vPen').textContent = '+' + cfg.penalty + 's';
+    $('sLight').value = cfg.light; $('vLight').textContent = cfg.light + ' cells';
+    $('sRand').checked = cfg.rand; $('sReveal').checked = cfg.reveal;
+  }
+  function onSetting(fresh){
+    cfg = {
+      n: +$('sN').value, time: +$('sTime').value, penalty: +$('sPen').value,
+      light: +$('sLight').value, rand: $('sRand').checked, reveal: $('sReveal').checked
+    };
+    store.set('maze.cfg', cfg);
+    syncSettingsUI();
+    if (fresh) newMaze(false); else { updateHud(); }
+  }
+  $('sN').onchange = () => onSetting(true);
+  $('sRand').onchange = () => onSetting(true);
+  $('sTime').oninput = () => onSetting(false);
+  $('sTime').onchange = () => onSetting(true);
+  $('sPen').oninput = () => onSetting(false);
+  $('sPen').onchange = () => onSetting(true);
+  $('sLight').oninput = () => onSetting(false);
+  $('sReveal').onchange = () => onSetting(false);
+
+  window.addEventListener('resize', resize);
+  syncSettingsUI();
+  resize();
+  newMaze(false);
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

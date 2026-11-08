@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Practice Hacks</title>
+<meta name="description" content="Practice versions of FiveM hacking minigames.">
+<style>
+  :root{--text:#e2e2e2;--muted:#8d8d8d;--accent:#ffb000;--card:#15171b;--line:#272a30}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;color:var(--text);
+    font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(ellipse at 50% 0%,#1c1f25 0%,#0c0d10 60%,#08090b 100%);background-attachment:fixed}
+  .wrap{max-width:960px;margin:0 auto;padding:56px 20px 40px}
+  h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
+  h1 span{color:var(--accent)}
+  .lead{margin:0 0 34px;color:var(--muted)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+  a.card{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:border-color .15s, transform .15s}
+  a.card:hover{border-color:#5a4a20;transform:translateY(-2px)}
+  .thumb{aspect-ratio:16/10;background:#0f0f10;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line)}
+  .thumb svg{width:58%;height:auto}
+  .body{padding:14px 16px 16px}
+  .body h2{margin:0 0 4px;font-size:17px}
+  .body p{margin:0;color:var(--muted);font-size:13.5px}
+  .tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .tags span{font-size:11.5px;color:#c9a14a;border:1px solid #3d3420;border-radius:999px;padding:1px 8px}
+  footer{margin-top:48px;color:#5f5f5f;font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Practice <span>Hacks</span></h1>
+  <p class="lead">Practice versions of server hacking minigames. Pick one and train until it's muscle memory.</p>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>Fan-made practice tools. Not affiliated with FiveM, Rockstar Games or any server.</footer>
+</div>
+
+<script>
+  // To add a game: put it in its own folder (e.g. lockpick/index.html) and add an entry here.
+  const GAMES = [
+    {
+      path: 'maze/',
+      name: 'Dark Maze',
+      desc: 'Drag the ball through a maze you can only see around you. The exit is in one of the corners — find it before the bar fills.',
+      tags: ['Mouse drag', '50s timer', 'Wall penalties'],
+      thumb: `<svg viewBox="0 0 100 100" fill="none" stroke="#ffb000" stroke-width="2.4" stroke-linecap="round">
+        <defs><radialGradient id="l" cx="46" cy="52" r="40" gradientUnits="userSpaceOnUse"><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+        <mask id="m"><rect width="100" height="100" fill="url(#l)"/></mask></defs>
+        <g mask="url(#m)" style="filter:drop-shadow(0 0 2px #ff9d00)">
+          <path d="M10 10H90V90H10Z M30 10V30H50 M70 10V50 M10 50H30V70 M50 30V70H70 M30 90V70 M90 70H70V90 M50 50H30"/>
+        </g>
+        <rect x="76" y="14" width="10" height="10" rx="1" fill="#ff2b2b" stroke="none" mask="url(#m)"/>
+        <circle cx="46" cy="58" r="3.6" fill="#f4f4f4" stroke="none"/>
+      </svg>`
+    },
+  ];
+
+  const grid = document.getElementById('grid');
+  for (const g of GAMES){
+    const a = document.createElement('a');
+    a.className = 'card'; a.href = g.path;
+    a.innerHTML = `<div class="thumb">${g.thumb}</div>
+      <div class="body"><h2></h2><p></p><div class="tags"></div></div>`;
+    a.querySelector('h2').textContent = g.name;
+    a.querySelector('p').textContent = g.desc;
+    const t = a.querySelector('.tags');
+    for (const tag of g.tags){ const s = document.createElement('span'); s.textContent = tag; t.appendChild(s); }
+    grid.appendChild(a);
+  }
+</script>
+</body>
+</html>
