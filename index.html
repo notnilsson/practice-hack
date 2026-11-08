@@ -8,20 +8,28 @@
 <style>
   :root{--text:#e2e2e2;--muted:#8d8d8d;--accent:#ffb000;--card:#15171b;--line:#272a30}
   *{box-sizing:border-box}
+  html{background-color:#08090b}
   html,body{margin:0;min-height:100%;color:var(--text);
     font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     background:radial-gradient(ellipse at 50% 0%,#1c1f25 0%,#0c0d10 60%,#08090b 100%);background-attachment:fixed}
   .wrap{max-width:960px;margin:0 auto;padding:56px 20px 40px}
   h1{margin:0 0 6px;font-size:30px;letter-spacing:-.3px}
   h1 span{color:var(--accent)}
-  .lead{margin:0 0 34px;color:var(--muted)}
+  .lead{margin:0 0 18px;color:var(--muted)}
+  .jobnav{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 36px}
+  .jobnav a{color:#cfcfcf;text-decoration:none;font-size:13px;border:1px solid var(--line);background:#121418;border-radius:999px;padding:5px 12px;transition:border-color .15s,color .15s}
+  .jobnav a:hover{border-color:#5a4a20;color:var(--accent)}
+  .jobnav a span{color:#6f6f6f;margin-left:6px}
+  section.job{margin:0 0 40px;scroll-margin-top:20px}
+  section.job h2{display:flex;align-items:baseline;gap:10px;margin:0 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:20px;letter-spacing:-.2px}
+  section.job h2 small{font-size:12.5px;font-weight:500;color:var(--muted)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
   a.card{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden;transition:border-color .15s, transform .15s}
   a.card:hover{border-color:#5a4a20;transform:translateY(-2px)}
   .thumb{aspect-ratio:16/10;background:#0f0f10;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line)}
   .thumb svg{width:58%;height:auto}
   .body{padding:14px 16px 16px}
-  .body h2{margin:0 0 4px;font-size:17px}
+  .body h3{margin:0 0 4px;font-size:17px}
   .body p{margin:0;color:var(--muted);font-size:13.5px}
   .tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
   .tags span{font-size:11.5px;color:#c9a14a;border:1px solid #3d3420;border-radius:999px;padding:1px 8px}
@@ -33,16 +41,26 @@
   <h1>Practice <span>Hacks</span></h1>
   <p class="lead">Practice versions of server hacking minigames. Pick one and train until it's muscle memory.</p>
 
-  <div class="grid" id="grid"></div>
+  <nav class="jobnav" id="jobnav" aria-label="Jobs"></nav>
+  <div id="jobs"></div>
 
   <footer>Fan-made practice tools. Not affiliated with FiveM, Rockstar Games or any server.</footer>
 </div>
 
 <script>
-  // To add a game: put it in its own folder (e.g. lockpick/index.html) and add an entry here.
+  // Sections, in the order they appear on the page.
+  const JOBS = [
+    {id: 'bobcat',    name: 'Bobcat'},
+    {id: 'arms-deal', name: 'Arms Deal'},
+    {id: 'dark-queue', name: 'Dark Queue'},
+  ];
+
+  // To add a game: put it in its own folder (e.g. lockpick/index.html) and add an entry here,
+  // with `job` set to one of the ids above (add a new job above if needed).
   const GAMES = [
     {
       path: 'maze/',
+      job: 'arms-deal',
       name: 'Dark Maze',
       desc: 'Drag the ball through a maze you can only see around you. The exit is in one of the corners — find it before the bar fills.',
       tags: ['Mouse drag', '50s timer', 'Wall penalties'],
@@ -58,6 +76,7 @@
     },
     {
       path: 'sequence/',
+      job: 'bobcat',
       name: 'Hex Sequence',
       desc: 'Enter the 4 codes in order: 1→2 same column, 2→3 same row, 3→4 same column. One wrong click fails the stage.',
       tags: ['Click', '3 stages', '60s per stage'],
@@ -71,6 +90,7 @@
     },
     {
       path: 'columns/',
+      job: 'dark-queue',
       name: 'Align the Columns – Dark Queue Crate Hack',
       desc: 'Each column\'s gap slides up and down. Click when the bright column\'s gap is on the line to lock it. Misses cost time.',
       tags: ['Timing', '8 columns', '20s timer'],
@@ -84,18 +104,46 @@
     },
   ];
 
-  const grid = document.getElementById('grid');
-  for (const g of GAMES){
+  function card(g){
     const a = document.createElement('a');
     a.className = 'card'; a.href = g.path;
     a.innerHTML = `<div class="thumb">${g.thumb}</div>
-      <div class="body"><h2></h2><p></p><div class="tags"></div></div>`;
-    a.querySelector('h2').textContent = g.name;
+      <div class="body"><h3></h3><p></p><div class="tags"></div></div>`;
+    a.querySelector('h3').textContent = g.name;
     a.querySelector('p').textContent = g.desc;
     const t = a.querySelector('.tags');
     for (const tag of g.tags){ const s = document.createElement('span'); s.textContent = tag; t.appendChild(s); }
-    grid.appendChild(a);
+    return a;
   }
+
+  const nav = document.getElementById('jobnav'), jobsEl = document.getElementById('jobs');
+  for (const job of JOBS){
+    const games = GAMES.filter(g => g.job === job.id);
+    if (!games.length) continue;
+    const count = `${games.length} hack${games.length === 1 ? '' : 's'}`;
+    const link = document.createElement('a');
+    link.href = '#' + job.id; link.textContent = job.name;
+    const c = document.createElement('span'); c.textContent = games.length; link.appendChild(c);
+    nav.appendChild(link);
+
+    const sec = document.createElement('section');
+    sec.className = 'job'; sec.id = job.id;
+    sec.innerHTML = '<h2><span></span><small></small></h2><div class="grid"></div>';
+    sec.querySelector('h2 span').textContent = job.name;
+    sec.querySelector('h2 small').textContent = count;
+    const grid = sec.querySelector('.grid');
+    games.forEach(g => grid.appendChild(card(g)));
+    jobsEl.appendChild(sec);
+  }
+  // games without a known job still show up
+  const other = GAMES.filter(g => !JOBS.some(j => j.id === g.job));
+  if (other.length){
+    const sec = document.createElement('section'); sec.className = 'job'; sec.id = 'other';
+    sec.innerHTML = '<h2><span>Other</span></h2><div class="grid"></div>';
+    other.forEach(g => sec.querySelector('.grid').appendChild(card(g)));
+    jobsEl.appendChild(sec);
+  }
+  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
 </script>
 </body>
 </html>
