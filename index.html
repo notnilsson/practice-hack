@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0e1014">
 <title>Practice Hacks</title>
 <meta name="description" content="Practice versions of FiveM hacking minigames.">
 <style>
@@ -13,6 +17,8 @@
   .wrap{max-width:1180px;margin:0 auto;padding:40px 24px 32px}
   h1{margin:0 0 4px;font-size:30px;letter-spacing:-.3px}
   h1 span{color:var(--accent)}
+  h1{display:flex;align-items:center;gap:12px}
+  h1 .logo{width:40px;height:40px;flex:none}
   .lead{margin:0 0 24px;color:var(--muted)}
   #jobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(460px,100%),1fr));gap:16px;align-items:start}
   section.job{margin:0;background:rgba(17,19,23,.65);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px;scroll-margin-top:16px}
@@ -34,7 +40,7 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Practice <span>Hacks</span></h1>
+  <h1><img class="logo" src="favicon.svg" alt="" width="40" height="40"><div>Practice <span>Hacks</span></div></h1>
   <p class="lead">Practice versions of server hacking minigames. Pick one and train until it's muscle memory.</p>
 
   <div id="jobs"></div>
