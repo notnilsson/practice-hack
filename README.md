@@ -22,7 +22,7 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 ### 24/7 Store Safe
 | Game | Folder | Description |
 |------|--------|-------------|
-| Ball Gate | [`safe/`](safe/) | Hold left click to open the gate for orange balls, release to block red ones. |
+| Ball Gate | [`safe/`](safe/) | Hold left click to open the gate for orange balls, release to block red ones. 3 phases; any mistake fails instantly. |
 
 ## Adding a game
 

@@ -87,13 +87,13 @@
       <label><span>Ball speed <b id="vSpeed"></b></span><input id="sSpeed" type="range" min="0.5" max="2" step="0.05"></label>
       <label><span>Correct balls per phase <b id="vPer"></b></span><input id="sPer" type="range" min="6" max="40" step="1"></label>
       <label><span>Phases <b id="vPhases"></b></span><input id="sPhases" type="range" min="1" max="5" step="1"></label>
-      <label><span>Mistake penalty <b id="vPen"></b></span><input id="sPen" type="range" min="0" max="6" step="1"></label>
+      <label id="penRow"><span>Mistake penalty (when instant fail is off) <b id="vPen"></b></span><input id="sPen" type="range" min="0" max="6" step="1"></label>
       <label><span>Share of red balls <b id="vRed"></b></span><input id="sRed" type="range" min="20" max="80" step="5"></label>
-      <label class="check"><input id="sFail" type="checkbox"> Hard mode: any mistake fails the hack</label>
+      <label class="check"><input id="sFail" type="checkbox"> Instant fail on any mistake (like in-game)</label>
       <div class="rules">
         <b>How to play:</b> balls drop toward the gate (the two red balls at the bottom).
         <b>Hold left click</b> (anywhere on the board) or <b>hold Space</b> to open the gate and let <b>orange</b> balls through;
-        <b>let go</b> to close it so <b>red</b> balls are blocked. Each correct ball fills the bar; fill it to clear the phase.
+        <b>let go</b> to close it so <b>red</b> balls are blocked. Each correct ball fills the bar; fill it to clear the phase. There are 3 phases and the speed stays the same. Like in-game, letting a red ball in or blocking an orange one <b>fails the hack instantly</b> (turn that off below to practise with a progress penalty instead).
         The gate takes ~0.2s to open, so start holding just before an orange ball arrives.
         Keys: R = restart, Enter = start.
       </div>
@@ -110,13 +110,13 @@
   const GATE_TIME = 0.2;                   // seconds to fully open / close
   const PASS_HALF = 30;                    // gate half-spread needed for a ball to slip through
   const CONTACT_Y = GATE_Y - Math.sqrt((2*R)**2 - CLOSED**2);
-  const DEFAULTS = {speed:1, per:24, phases:3, penalty:2, red:50, fail:false};
+  const DEFAULTS = {speed:1, per:24, phases:3, penalty:2, red:50, fail:true};   // in-game: any mistake = instant fail
 
   const store = {
     get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  let cfg = Object.assign({}, DEFAULTS, store.get('safe.cfg', {}));
+  let cfg = Object.assign({}, DEFAULTS, store.get('safe.cfg.v2', {}));
   let stats = store.get('safe.stats', {});
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');
@@ -240,7 +240,7 @@
       mistakes++;
       missUntil = now() + 0.3;
       cv.classList.add('miss'); setTimeout(() => cv.classList.remove('miss'), 250);
-      if (cfg.fail) return lose(kind === 'red' ? 'A red ball got through.' : 'An orange ball was blocked.');
+      if (cfg.fail) return lose(kind === 'red' ? 'A red ball got in.' : 'An orange ball was blocked.');
       progress = Math.max(0, progress - cfg.penalty);
     }
     paintBars();
@@ -329,7 +329,7 @@
     state = 'idle'; phase = 0; mistakes = 0; endTime = 0; gate = 0; holding = false;
     resetPhase(); buildBars();
     showOverlay('24/7 Store Safe', 'neutral',
-      `Hold left click to open the gate for <b style="color:#f2b21c">orange</b> balls, let go to block <b style="color:#ff4a3d">red</b> ones. ${cfg.phases} phase${cfg.phases>1?'s':''} × ${cfg.per} balls.`);
+      `Hold left click to open the gate for <b style="color:#f2b21c">orange</b> balls, let go to block <b style="color:#ff4a3d">red</b> ones. ${cfg.phases} phase${cfg.phases>1?'s':''} × ${cfg.per} balls. ${cfg.fail ? 'One mistake and you fail.' : `Mistakes cost ${cfg.penalty} progress.`}`);
     renderStats();
   }
 
@@ -376,12 +376,13 @@
   function syncUI(){
     for (const [s, v, k, f] of fields){ $(s).value = cfg[k]; $(v).textContent = f(cfg[k]); }
     $('sFail').checked = cfg.fail;
+    $('penRow').style.opacity = cfg.fail ? .45 : 1; $('sPen').disabled = cfg.fail;
   }
   for (const [s, v, k, f] of fields){
     $(s).oninput = () => { $(v).textContent = f(+$(s).value); };
-    $(s).onchange = () => { cfg[k] = +$(s).value; store.set('safe.cfg', cfg); syncUI(); toIdle(); };
+    $(s).onchange = () => { cfg[k] = +$(s).value; store.set('safe.cfg.v2', cfg); syncUI(); toIdle(); };
   }
-  $('sFail').onchange = () => { cfg.fail = $('sFail').checked; store.set('safe.cfg', cfg); toIdle(); };
+  $('sFail').onchange = () => { cfg.fail = $('sFail').checked; store.set('safe.cfg.v2', cfg); syncUI(); toIdle(); };
 
   window.addEventListener('resize', resize);
   resize(); syncUI(); toIdle(); requestAnimationFrame(frame);
