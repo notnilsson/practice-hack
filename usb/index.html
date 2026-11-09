@@ -720,29 +720,24 @@
   }
 
   // ---------- shortcut: typing the word below (outside the terminal) plays the ending ----------
-  const CHEAT = 'mrmoss';
-  let cheatBuf = '', cheatTimer = null;
-  function cheatFlush(){
-    if (cheatBuf === 'm') SFX.setMuted(!SFX.muted);   // a lone M keeps working as the mute key
-    cheatBuf = ''; clearTimeout(cheatTimer);
-  }
+  // uses no shortcut letters (M, R, A, D), so it never blocks or delays another key
+  const CHEAT = 'eyesonyou';
+  let cheatBuf = '', cheatLast = 0;
   window.addEventListener('keydown', e => {
     const tag = e.target && e.target.tagName;
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
     if (document.querySelector('.hx')) return;
     const k = (e.key || '').toLowerCase();
     if (k.length !== 1) return;
-    if (cheatBuf && !CHEAT.startsWith(cheatBuf + k)) cheatFlush();
-    if (!CHEAT.startsWith(cheatBuf + k)) return;          // not part of the code: let the key do its normal job
-    e.stopImmediatePropagation(); e.preventDefault();
-    cheatBuf += k; clearTimeout(cheatTimer);
+    const t = performance.now();
+    if (t - cheatLast > 1000) cheatBuf = '';
+    cheatLast = t;
+    cheatBuf = (cheatBuf + k).slice(-CHEAT.length);
     if (cheatBuf === CHEAT){
       cheatBuf = '';
       hideOv(); game.phase = 'done';
       secretEnding(toIdle);
-      return;
     }
-    cheatTimer = setTimeout(cheatFlush, 1000);
   }, true);
 
   // ---------- clock ----------
