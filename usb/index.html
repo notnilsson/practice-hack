@@ -733,7 +733,7 @@
 
     // The city is a grid of blocks (pitch P) separated by streets (width WS). It repeats every F units,
     // and every tower is drawn at the copy nearest the camera, so it never ends.
-    const P = 34, WS = 14, R = 14, NB = 15, F = NB * P, B = P - WS, items = [];
+    const P = 40, WS = 14, NB = 15, F = NB * P, B = P - WS, items = [];
     const tower = (x, z, w, d) => { const h = Math.random() < 0.15 ? rnd(60, 95) : rnd(110, 215); items.push({bx: x, y: -90 + h / 2, bz: z, sx: w, sy: h, sz: d}); };
     for (let i = 0; i < NB; i++) for (let j = 0; j < NB; j++){
       const cx = (i + 0.5) * P, cz = (j + 0.5) * P;
@@ -759,48 +759,57 @@
       mesh.instanceMatrix.needsUpdate = true;
     }
 
-    // Flight path: along the street centre lines; at some intersections it sweeps a quarter circle left or right.
-    const path = {x: 0, z: 0, d: 0, rem: P, arc: null, decided: false};
+    // Flight path: along the street centre lines; at some intersections it turns 90 degrees left or right.
+    // The heading follows an ease-in / ease-out curve over the length of the turn (no sudden start or stop),
+    // beginning D before the intersection centre and ending D past it on the cross street.
+    const HALF = Math.PI / 2, D = 20, NO_TURN_START = 2.5, NO_TURN_AFTER = 3;
+    const ease = x => x * x * x * (x * (6 * x - 15) + 10);          // smootherstep: zero turn rate and zero change of turn rate at both ends
+    let kk = 0; for (let i = 0; i < 2000; i++) kk += Math.cos(HALF * ease((i + 0.5) / 2000)) / 2000;
+    const LT = D / kk;                                                // path length of one turn
+    const path = {x: 0, z: 0, d: 0, rem: P, turn: null, decided: false, lastTurn: -99};
     const fwd = a => [Math.sin(a), -Math.cos(a)], rgt = a => [Math.cos(a), Math.sin(a)];
     function advance(dist, t){
       let guard = 0;
       while (dist > 1e-6 && guard++ < 12){
-        if (path.arc){
-          const A = path.arc, dphi = Math.min(dist / R, Math.PI / 2 - A.phi);
-          A.phi += dphi; dist -= dphi * R;
-          const r = rgt(A.a0 + A.s * A.phi);
-          path.x = A.cx - A.s * R * r[0]; path.z = A.cz - A.s * R * r[1];
-          if (A.phi >= Math.PI / 2 - 1e-9){ path.d = (path.d + A.s + 4) % 4; path.arc = null; path.rem = P - R; path.decided = false; }
+        if (path.turn){
+          const T = path.turn; let left = Math.min(dist, LT - T.u); dist -= left;
+          while (left > 1e-9){
+            const ds = Math.min(0.2, left), f = fwd(T.a0 + T.s * HALF * ease((T.u + ds / 2) / LT));
+            path.x += f[0] * ds; path.z += f[1] * ds; T.u += ds; left -= ds;
+          }
+          if (T.u >= LT - 1e-9){ path.x = T.ex; path.z = T.ez; path.d = (path.d + T.s + 4) % 4; path.turn = null; path.rem = P - D; path.decided = false; path.lastTurn = t; }
         } else {
-          const a = path.d * Math.PI / 2, f = fwd(a);
-          const step = Math.min(dist, path.decided ? path.rem : path.rem - R);
+          const a = path.d * HALF, f = fwd(a);
+          const step = Math.min(dist, path.decided ? path.rem : path.rem - D);
           path.x += f[0] * step; path.z += f[1] * step; path.rem -= step; dist -= step;
-          if (!path.decided && path.rem <= R + 1e-9){
+          if (!path.decided && path.rem <= D + 1e-9){
             path.decided = true;
-            if (t > 2.5 && Math.random() < 0.27){                     // turn here
-              const sgn = Math.random() < 0.5 ? -1 : 1, r = rgt(a);
-              path.arc = {a0: a, s: sgn, phi: 0, cx: path.x + sgn * R * r[0], cz: path.z + sgn * R * r[1]};
+            if (t >= NO_TURN_START && t - path.lastTurn >= NO_TURN_AFTER && Math.random() < 0.35){
+              const sgn = Math.random() < 0.5 ? -1 : 1, f2 = fwd(a + sgn * HALF);
+              path.turn = {a0: a, s: sgn, u: 0, ex: path.x + D * f[0] + D * f2[0], ez: path.z + D * f[1] + D * f2[1]};
             }
           } else if (path.decided && path.rem <= 1e-9){ path.rem = P; path.decided = false; }
         }
       }
-      if (!path.arc){                                                // the city repeats, so wrapping is invisible
+      if (!path.turn){                                               // the city repeats, so wrapping is invisible
         if (path.x > F) path.x -= F; else if (path.x < -F) path.x += F;
         if (path.z > F) path.z -= F; else if (path.z < -F) path.z += F;
       }
     }
+    const bell = x => 16 * x * x * (1 - x) * (1 - x);               // 0 at both ends of a turn, 1 in the middle (same shape as the turn rate)
     cam.rotation.order = 'YXZ';
     return {
       size(){ renderer.setSize(window.innerWidth, window.innerHeight, false); cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix(); },
       render(t, dt, mx, my, dry){
-        const lean0 = path.arc ? Math.sin(2 * path.arc.phi) : 0;
-        advance((26 + 70 * Math.exp(-t * 1.1)) * (1 - 0.28 * lean0) * dt, t);     // bursts in fast, cruises, eases off through turns
-        const A = path.arc, a = A ? A.a0 + A.s * A.phi : path.d * Math.PI / 2, sgn = A ? A.s : 0, lean = A ? Math.sin(2 * A.phi) : 0;
+        const lean0 = path.turn ? bell(path.turn.u / LT) : 0;
+        advance((26 + 70 * Math.exp(-t * 1.1)) * (1 - 0.5 * lean0) * dt, t);     // bursts in fast, cruises, slows through turns
+        const T = path.turn, x = T ? T.u / LT : 0, sgn = T ? T.s : 0, lean = T ? bell(x) : 0;
+        const a = T ? T.a0 + T.s * HALF * ease(x) : path.d * HALF;
         const r = rgt(a), sway = (Math.sin(t * 0.37) * 2.6 + (mx - 0.5) * 3) * (1 - 0.85 * lean);
         cam.position.set(path.x + r[0] * sway, Math.sin(t * 0.23) * 6 + (0.5 - my) * 5, path.z + r[1] * sway);
-        cam.rotation.y = -(a + sgn * 0.22 * lean) + Math.sin(t * 0.19) * 0.06 - (mx - 0.5) * 0.25;   // looks into the turn
+        cam.rotation.y = -(a + sgn * 0.12 * lean) + Math.sin(t * 0.19) * 0.06 - (mx - 0.5) * 0.25;   // looks slightly into the turn
         cam.rotation.x = Math.sin(t * 0.27) * 0.05 + (0.5 - my) * 0.12;
-        cam.rotation.z = -sgn * 0.4 * lean - Math.cos(t * 0.37) * 0.07;                              // banks into the turn
+        cam.rotation.z = -sgn * 0.32 * lean - Math.cos(t * 0.37) * 0.07;                              // banks into the turn
         write(cam.position.x, cam.position.z);
         mat.uniforms.uTime.value = t;
         if (!dry) renderer.render(scene, cam);
@@ -812,7 +821,7 @@
           const dx = Math.max(0, Math.abs(c.x - arr[o + 12]) - arr[o] / 2), dz = Math.max(0, Math.abs(c.z - arr[o + 14]) - arr[o + 10] / 2);
           clear = Math.min(clear, Math.hypot(dx, dz));
         }
-        return {x: path.x, z: path.z, d: path.d, turning: !!path.arc, n: items.length, clear};
+        return {x: path.x, z: path.z, d: path.d, turning: !!path.turn, n: items.length, clear, yaw: cam.rotation.y, roll: cam.rotation.z};
       },
       dispose(){ try{ geo.dispose(); mat.dispose(); atlas.dispose(); renderer.dispose(); renderer.forceContextLoss(); }catch(e){} renderer.domElement.remove(); }
     };
