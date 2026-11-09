@@ -47,7 +47,7 @@
   function noise(dur, {gain = 0.15, type = 'bandpass', freq = 1200, to = null, q = 1, delay = 0, attack = 0.004} = {}){
     const c = ensure(); if (!c || muted) return;
     const t = c.currentTime + delay;
-    const s = c.createBufferSource(); s.buffer = noiseBuf;
+    const s = c.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
     const f = c.createBiquadFilter(); f.type = type; f.Q.value = q; f.frequency.setValueAtTime(freq, t);
     if (to) f.frequency.exponentialRampToValueAtTime(to, t + dur);
     const g = c.createGain();
@@ -83,6 +83,10 @@
     granted:  () => seq([784, 1047, 1568], 0.1, {type:'sine', gain:0.18}),
     denied:   () => { tone(220, 0.38, {type:'square', gain:0.09, filter:{freq:1000}}); tone(165, 0.38, {type:'square', gain:0.09, delay:0.16, filter:{freq:900}}); },
     start:    () => seq([440, 660], 0.06, {type:'triangle', gain:0.12}),
+    glitch:   () => { noise(0.09, {gain:0.16, type:'highpass', freq:2800}); tone(96, 0.12, {type:'square', gain:0.1, filter:{freq:900}}); noise(0.05, {gain:0.12, freq:900, q:4, delay:0.11}); },
+    haunt:    () => { tone(55, 7, {type:'sawtooth', gain:0.11, attack:1.2, filter:{freq:260}}); tone(58.3, 7, {type:'sawtooth', gain:0.08, attack:1.8, filter:{freq:220}});
+                      tone(77.8, 6.5, {type:'sine', gain:0.07, attack:2.5, delay:0.5}); tone(1244, 4, {type:'sine', gain:0.012, attack:1.5, slide:1109, delay:2.4});
+                      noise(6, {gain:0.02, freq:400, to:1800, q:3, attack:2}); },
   };
 
   // countdown helper: call every frame with seconds left; ticks once per second in the last `from` seconds
