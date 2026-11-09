@@ -108,6 +108,20 @@
   .hx .big.glitch{animation:hxGlitch .24s steps(3) 1}
   @keyframes hxFloat{0%,100%{transform:rotateX(16deg) rotateY(-8deg) translateZ(0)}50%{transform:rotateX(7deg) rotateY(8deg) translateZ(70px)}}
   @keyframes hxGlitch{0%{transform:translate(-8px,2px) skewX(-14deg);text-shadow:-5px 0 #ff2a4d,5px 0 #9ff}50%{transform:translate(6px,-3px) skewX(10deg);text-shadow:5px 0 #ff2a4d,-5px 0 #9ff;opacity:.6}100%{transform:none}}
+  .hx.instant{transition:none}
+  .hx .crash{position:absolute;inset:0;z-index:3;background:#0a5fd0;color:#fff;font-family:"Segoe UI",system-ui,-apple-system,sans-serif;padding:13vh 0 0 11vw;cursor:none}
+  .hx .crash .face{font-size:clamp(70px,10vw,170px);line-height:1;font-weight:300;margin-bottom:5vh}
+  .hx .crash p{font-size:clamp(15px,1.75vw,28px);line-height:1.45;max-width:62vw;margin:0 0 4vh;font-weight:300}
+  .hx .crash .pct{font-size:clamp(15px,1.75vw,28px);font-weight:300;margin-bottom:5vh}
+  .hx .crash .info{display:flex;gap:1.6vw;align-items:flex-start;font-size:clamp(11px,.95vw,15px);line-height:1.6;font-weight:300}
+  .hx .crash canvas{position:static;width:clamp(70px,6.5vw,110px);height:clamp(70px,6.5vw,110px);background:#fff;image-rendering:pixelated}
+  .hx .crash.tear{animation:hxTear .38s steps(6) forwards}
+  @keyframes hxTear{0%{clip-path:inset(0);filter:none;transform:none}
+    20%{clip-path:polygon(0 0,100% 0,100% 18%,0 22%,0 40%,100% 36%,100% 64%,0 70%);transform:translateX(-3vw);filter:hue-rotate(110deg) saturate(3)}
+    40%{clip-path:polygon(0 10%,100% 6%,100% 30%,0 34%,0 58%,100% 52%,100% 90%,0 94%);transform:translateX(4vw) skewX(12deg);filter:invert(1)}
+    60%{clip-path:polygon(0 30%,100% 26%,100% 44%,0 48%,0 70%,100% 72%,100% 80%,0 84%);transform:translateX(-6vw);filter:hue-rotate(-90deg) contrast(3)}
+    80%{clip-path:polygon(0 46%,100% 44%,100% 52%,0 54%);transform:scaleY(.3) translateX(2vw);filter:brightness(3)}
+    100%{clip-path:polygon(0 49.8%,100% 49.8%,100% 50.2%,0 50.2%);transform:scaleY(.02);filter:brightness(5)}}
   .hx .hint{position:absolute;left:0;right:0;bottom:4vh;text-align:center;font-size:12px;letter-spacing:.3em;opacity:0;transition:opacity 1s;color:#6fd795}
   .hx .hint.on{opacity:.75}
   .row{width:var(--w);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
@@ -591,27 +605,85 @@
       : 'These settings: no runs yet';
   }
 
+  // details for the trace log, read locally from the browser (nothing is sent anywhere)
+  function profileLog(){
+    const ua = navigator.userAgent || '', uad = navigator.userAgentData, plat = (uad && uad.platform) || navigator.platform || '';
+    const grab = re => (ua.match(re) || [])[1];
+    let os = 'UNKNOWN';
+    if (/iPhone|iPad|iPod/.test(ua)) os = 'IOS';
+    else if (/Android/i.test(ua + plat)) os = 'ANDROID';
+    else if (/Win/i.test(plat) || /Windows NT/.test(ua)) os = 'WINDOWS';
+    else if (/Mac/i.test(plat) || /Mac OS X/.test(ua)) os = 'MACOS';
+    else if (/CrOS/.test(ua)) os = 'CHROME OS';
+    else if (/Linux/i.test(plat + ua)) os = 'LINUX';
+    let br = 'UNKNOWN';
+    if (grab(/Edg\/(\d+)/)) br = 'EDGE ' + grab(/Edg\/(\d+)/);
+    else if (grab(/OPR\/(\d+)/)) br = 'OPERA ' + grab(/OPR\/(\d+)/);
+    else if (grab(/Firefox\/(\d+)/)) br = 'FIREFOX ' + grab(/Firefox\/(\d+)/);
+    else if (grab(/Chrome\/(\d+)/)) br = 'CHROME ' + grab(/Chrome\/(\d+)/);
+    else if (grab(/Version\/(\d+).*Safari/)) br = 'SAFARI ' + grab(/Version\/(\d+).*Safari/);
+    const row = (label, value) => `  ${label} ${'.'.repeat(Math.max(2, 15 - label.length))} ${value}`;
+    let tz = 'UNKNOWN'; try{ tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UNKNOWN').replace(/_/g, ' ').toUpperCase(); }catch(e){}
+    const dpr = window.devicePixelRatio || 1;
+    const seen = store.get('usb.secret', 0) || 0;
+    const mmss = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+    const lines = [
+      '> SIGNATURE ACCEPTED',
+      '> NODE BREACHED ............ OK',
+      '> WARNING: UPLINK HIJACKED',
+      '> REVERSE TRACE RUNNING ...',
+      row('LOCATION', tz),
+      () => row('LOCAL TIME', new Date().toLocaleTimeString('en-GB')),
+      row('SYSTEM', `${os} / ${br}`),
+      row('DISPLAY', `${Math.round(screen.width * dpr)}×${Math.round(screen.height * dpr)}`),
+    ];
+    if (navigator.hardwareConcurrency) lines.push(row('CPU', `${navigator.hardwareConcurrency} THREADS`));
+    if (navigator.deviceMemory) lines.push(row('MEMORY', navigator.deviceMemory >= 8 ? '8 GB OR MORE' : navigator.deviceMemory + ' GB'));
+    if (navigator.getBattery){
+      const i = lines.length; lines.push(row('BATTERY', 'READING...'));
+      navigator.getBattery().then(b => {
+        lines[i] = (b.level === 1 && b.charging && b.chargingTime === 0) ? row('POWER', 'MAINS, ALWAYS ON')
+          : row('BATTERY', `${Math.round(b.level * 100)}% · ${b.charging ? 'CHARGING' : 'DRAINING'}`);
+      }).catch(() => { lines[i] = row('BATTERY', 'HIDDEN'); });
+    }
+    lines.push(row('LANGUAGE', (navigator.language || 'UNKNOWN').toUpperCase()));
+    lines.push(() => row('TIME ON SITE', mmss(performance.now() / 1000)));
+    lines.push(row('PRIOR CONTACT', seen > 0 ? `${seen} TIME${seen > 1 ? 'S' : ''}` : 'NONE'));   // read before this showing is counted
+    lines.push('> OPERATOR LOCATED');
+    lines.push('> PROFILE ARCHIVED');
+    return lines;
+  }
+
   // ---------- secret ending ----------
   function secretEnding(done){
-    const T0 = performance.now();
+    const TS = performance.now(), CRASH = 3400, T0 = TS + CRASH;   // fake crash screen, then the rain
     const GL = 'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789:.=*+-<>¦';
-    const LOG = ['> SIGNATURE ACCEPTED', '> NODE BREACHED ............ OK', '> WARNING: UPLINK HIJACKED', '> REVERSE TRACE RUNNING ...', '> OPERATOR LOCATED'];
+    const LOG = profileLog();
     const MSG = 'A MYSTERIOUS ORGANISATION\nHAS THEIR EYES ON YOU';
-    let alive = true, wentFull = false, mx = 0.5, my = 0.4, last = T0, typed = -1, nextGlitch = 4.6, nextBlink = 7.5, blinkT = -9;
+    let shownLines = 0, alive = true, wentFull = false, mx = 0.5, my = 0.4, last = T0, typed = -1, nextGlitch = 4.6, nextBlink = 7.5, blinkT = -9;
     store.set('usb.secret', (store.get('usb.secret', 0) || 0) + 1);
+    { const w = store.get('ph.watch', null) || {}; w.seen = Date.now(); w.pending = true; store.set('ph.watch', w); }   // the site remembers (see watch.js)
 
     $('screen').classList.add('hacked'); SFX.play('glitch');
     setTimeout(() => $('screen').classList.remove('hacked'), 600);
 
     const el = document.createElement('div'); el.className = 'hx';
-    el.innerHTML = '<canvas></canvas><div class="vig"></div><div class="scan"></div><div class="log"></div><div class="stage"><div class="msg"><div class="big"></div></div></div><div class="hint">[ PRESS ANY KEY ]</div>';
+    el.innerHTML = '<canvas></canvas><div class="vig"></div><div class="scan"></div><div class="log"></div><div class="stage"><div class="msg"><div class="big"></div></div></div><div class="hint">[ PRESS ANY KEY ]</div>' +
+      '<div class="crash"><div class="face">:(</div><p>Your PC ran into a problem and needs to restart. We\'re just collecting some info about you, and then we\'ll restart for you.</p>' +
+      '<div class="pct"><span class="n">0</span>% complete</div><div class="info"><canvas width="25" height="25"></canvas><div>For more information about this issue, don\'t look it up.<br><br>If you call a support person, give them this info:<br>Stop code: OBSERVER_PROTOCOL_ENGAGED</div></div></div>';
     document.body.appendChild(el);
     const cv = el.querySelector('canvas'), c = cv.getContext('2d'), logEl = el.querySelector('.log'), bigEl = el.querySelector('.big'), hintEl = el.querySelector('.hint');
     try{
       const r = document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
       if (r && r.then) r.then(() => { wentFull = true; }).catch(() => {});
     }catch(e){}
-    setTimeout(() => { el.classList.add('on'); SFX.play('haunt'); }, 420);
+    const crash = el.querySelector('.crash'), pctEl = crash.querySelector('.n');
+    { const q = crash.querySelector('canvas').getContext('2d'); q.fillStyle = '#fff'; q.fillRect(0, 0, 25, 25); q.fillStyle = '#0a5fd0';
+      for (let y = 0; y < 25; y++) for (let x = 0; x < 25; x++) if (Math.random() < .5) q.fillRect(x, y, 1, 1);
+      for (const [x, y] of [[0,0],[18,0],[0,18]]){ q.fillRect(x, y, 7, 7); q.fillStyle = '#fff'; q.fillRect(x+1, y+1, 5, 5); q.fillStyle = '#0a5fd0'; q.fillRect(x+2, y+2, 3, 3); } }
+    setTimeout(() => el.classList.add('instant', 'on'), 450);
+    setTimeout(() => { if (alive){ crash.classList.add('tear'); SFX.play('glitch'); } }, CRASH - 380);
+    setTimeout(() => { crash.remove(); el.classList.remove('instant'); if (alive) SFX.play('haunt'); }, CRASH);
 
     let W = 0, H = 0;
     function size(){ const d = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.round(window.innerWidth * d); H = cv.height = Math.round(window.innerHeight * d); }
@@ -652,6 +724,11 @@
       if (!alive) return;
       const dt = Math.min(0.05, (nowMs - last) / 1000); last = nowMs;
       const t = (nowMs - T0) / 1000;
+      if (t < 0){   // crash screen: the percentage creeps up in uneven jumps
+        const k = Math.max(0, (nowMs - TS - 450) / (CRASH - 830));
+        pctEl.textContent = Math.min(31, Math.floor(Math.pow(k, 1.6) * 31 / 4) * 4 + (k > .2 ? 3 : 0));
+        requestAnimationFrame(frame); return;
+      }
       c.setTransform(1, 0, 0, 1, 0, 0);
       c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
       // camera: slow roll + parallax from the mouse
@@ -686,8 +763,9 @@
       drawEye(t);
 
       // typed text
-      const n = Math.max(0, Math.floor((t - 0.7) * 46)); let left = n, out = [];
-      for (const line of LOG){ if (left <= 0) break; out.push(line.slice(0, left)); left -= line.length + 8; }
+      const n = Math.max(0, Math.floor((t - 0.4) * 115)); let left = n, out = [];
+      for (const item of LOG){ if (left <= 0) break; const line = typeof item === 'function' ? item() : item; out.push(line.slice(0, left)); left -= line.length + 7; }
+      if (out.length !== shownLines){ shownLines = out.length; if (shownLines > 4) SFX.play('tick'); }
       logEl.textContent = out.join('\n');
       const m = Math.max(0, Math.min(MSG.length, Math.floor((t - 2.9) * 19)));
       if (m !== typed){
@@ -806,5 +884,6 @@
   resize(); syncUI(); toIdle(); requestAnimationFrame(tick);
 })();
 </script>
+<script src="../watch.js"></script>
 </body>
 </html>
