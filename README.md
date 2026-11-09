@@ -38,6 +38,10 @@ All games share `sfx.js`, which synthesizes every sound effect with the Web Audi
 Each game shows a mute button and volume slider in the bottom-right corner (or press **M**); the setting is shared across all games.
 To add sound to a new game, include `<script src="../sfx.js"></script>` and call `SFX.play('ok')`, `SFX.play('bad')`, `SFX.play('win')` etc.
 
+## Third-party code
+
+`vendor/three.min.js` is [three.js](https://threejs.org/) r128, MIT licensed (see `vendor/three.LICENSE`).
+
 ## Hosting
 
 Settings → Pages → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`.

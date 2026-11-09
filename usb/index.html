@@ -654,13 +654,128 @@
     return lines;
   }
 
+  // ---------- 3D city for the ending (three.js, loaded only when the ending starts) ----------
+  let threeP = null;
+  function loadThree(){
+    if (window.THREE) return Promise.resolve(window.THREE);
+    return threeP || (threeP = new Promise((res, rej) => {
+      const sc = document.createElement('script'); sc.src = '../vendor/three.min.js';
+      sc.onload = () => window.THREE ? res(window.THREE) : rej(); sc.onerror = rej;
+      document.head.appendChild(sc);
+    }));
+  }
+  function makeCity(THREE, host, GL){
+    const FOG = new THREE.Color(0x04240f);
+    const renderer = new THREE.WebGLRenderer({antialias: true, powerPreference: 'high-performance'});
+    renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+    renderer.setClearColor(FOG, 1);
+    host.insertBefore(renderer.domElement, host.firstChild);
+    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(72, 1, 0.5, 480);
+
+    // glyph atlas: 8 x 8 characters
+    const ac = document.createElement('canvas'); ac.width = ac.height = 512;
+    const a = ac.getContext('2d');
+    a.fillStyle = '#000'; a.fillRect(0, 0, 512, 512);
+    a.fillStyle = '#fff'; a.textAlign = 'center'; a.textBaseline = 'middle';
+    a.font = 'bold 46px "MS Gothic","Yu Gothic","Noto Sans Mono CJK JP","Lucida Console",monospace';
+    for (let i = 0; i < 64; i++) a.fillText(GL[i % GL.length], (i % 8) * 64 + 32, Math.floor(i / 8) * 64 + 34);
+    const atlas = new THREE.CanvasTexture(ac);
+    atlas.minFilter = THREE.LinearFilter; atlas.magFilter = THREE.LinearFilter; atlas.generateMipmaps = false;
+
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {uTime: {value: 0}, uAtlas: {value: atlas}, uFog: {value: FOG}},
+      vertexShader: `
+        attribute float aSeed;
+        varying vec3 vL; varying vec3 vN; varying vec3 vHalf; varying float vSeed; varying float vDist;
+        void main(){
+          vec3 sc = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
+          vL = position * sc; vHalf = sc * 0.5; vN = normal; vSeed = aSeed;
+          vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
+          vDist = length(mv.xyz);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        precision highp float;
+        uniform float uTime; uniform sampler2D uAtlas; uniform vec3 uFog;
+        varying vec3 vL; varying vec3 vN; varying vec3 vHalf; varying float vSeed; varying float vDist;
+        float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        void main(){
+          vec3 col;
+          if (abs(vN.y) < 0.5){
+            bool xf = abs(vN.x) > 0.5;
+            vec2 uv = xf ? vec2(vL.z, vL.y) : vec2(vL.x, vL.y);
+            float hu = xf ? vHalf.z : vHalf.x;
+            vec2 q = (uv + vec2(hu, vHalf.y)) / 1.25;
+            vec2 cell = floor(q), f = fract(q);
+            float side = xf ? 1.0 : 2.0;
+            float r = hash(vec2(cell.x + side * 17.0, vSeed));
+            float speed = 4.0 + r * 9.0;
+            float span = 24.0 + hash(vec2(cell.x, vSeed + 7.0)) * 40.0;
+            float d = mod(cell.y + floor(uTime * speed) + r * span, span);        // cells above the falling head
+            float trail = clamp(1.0 - d / (span * 0.85), 0.0, 1.0); trail *= trail;
+            float head = step(d, 0.5);
+            float gi = floor(hash(cell + vSeed + floor(uTime * (1.5 + r * 4.0) + r * 10.0) * 0.61) * 64.0);
+            vec2 g = vec2(mod(gi, 8.0), floor(gi / 8.0));
+            float glyph = texture2D(uAtlas, (g + f) / 8.0).r;
+            float live = step(0.2, hash(vec2(cell.x * 1.7 + side, vSeed + 3.0)));   // some columns are dead
+            float grime = 0.4 + 0.6 * hash(floor(q * vec2(0.34, 0.11)) + vSeed);    // patchy, worn panels
+            col = mix(vec3(0.08, 1.0, 0.36), vec3(0.9, 1.0, 0.93), head) * glyph * (0.1 + trail * 1.5 + head * 1.4) * (0.15 + 0.85 * live) * grime;
+            col += vec3(0.0, 0.05, 0.02) * grime;
+            col += vec3(0.08, 0.75, 0.3) * smoothstep(0.16, 0.0, hu - abs(uv.x)) * 0.6;   // lit corner edges
+            col *= 1.0 - 0.6 * step(0.92, fract(q.y / 6.0));                       // floor seams
+          } else {
+            col = vec3(0.0, 0.04, 0.016);
+          }
+          float fog = 1.0 - exp(-vDist * vDist * 0.000045);
+          gl_FragColor = vec4(mix(col, uFog, fog), 1.0);
+        }`
+    });
+
+    // towers packed four deep on both sides of a narrow canyon, plus beams crossing it
+    const ROWS = 34, ROW = 13, LEN = ROWS * ROW, items = [];
+    for (let r = 0; r < ROWS; r++){
+      for (const sd of [-1, 1]) for (let k = 0; k < 4; k++){
+        const w = rnd(8, 12), d = rnd(8, 12), h = k === 0 ? rnd(125, 215) : rnd(60, 215);
+        items.push({x: sd * (6.5 + w / 2 + k * 13 + rnd(0, 1.5)), y: -90 + h / 2, z: -r * ROW + rnd(-1, 1), sx: w, sy: h, sz: d});
+      }
+      if (r % 5 === 2) items.push({x: 0, y: (Math.random() < .5 ? -1 : 1) * rnd(15, 42), z: -r * ROW, sx: rnd(14, 17), sy: rnd(1.5, 3.2), sz: rnd(2, 4)});
+    }
+    const geo = new THREE.BoxGeometry(1, 1, 1);
+    geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(Float32Array.from(items, () => Math.random() * 100), 1));
+    const mesh = new THREE.InstancedMesh(geo, mat, items.length);
+    mesh.frustumCulled = false; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    scene.add(mesh);
+    const arr = mesh.instanceMatrix.array;
+    function write(){
+      for (let i = 0; i < items.length; i++){
+        const it = items[i], o = i * 16;
+        arr[o] = it.sx; arr[o + 5] = it.sy; arr[o + 10] = it.sz; arr[o + 12] = it.x; arr[o + 13] = it.y; arr[o + 14] = it.z; arr[o + 15] = 1;
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+    return {
+      size(){ renderer.setSize(window.innerWidth, window.innerHeight, false); cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix(); },
+      render(t, dt, mx, my){
+        const v = 26 + 70 * Math.exp(-t * 1.1);                    // bursts in fast, then cruises
+        for (const it of items){ it.z += v * dt; if (it.z > 14) it.z -= LEN; }
+        write();
+        mat.uniforms.uTime.value = t;
+        cam.position.set(Math.sin(t * 0.37) * 3 + (mx - 0.5) * 3.5, Math.sin(t * 0.23) * 7 + (0.5 - my) * 6, 0);
+        cam.lookAt(cam.position.x * 0.2 + Math.sin(t * 0.19) * 5, cam.position.y * 0.6, -70);
+        cam.rotateZ(-Math.cos(t * 0.37) * 0.16);                   // bank into the turns
+        renderer.render(scene, cam);
+      },
+      dispose(){ try{ geo.dispose(); mat.dispose(); atlas.dispose(); renderer.dispose(); renderer.forceContextLoss(); }catch(e){} renderer.domElement.remove(); }
+    };
+  }
+
   // ---------- secret ending ----------
   function secretEnding(done){
     const TS = performance.now(), CRASH = 3400, T0 = TS + CRASH;   // fake crash screen, then the rain
     const GL = 'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789:.=*+-<>¦';
     const LOG = profileLog();
     const MSG = 'A MYSTERIOUS ORGANISATION\nHAS THEIR EYES ON YOU';
-    let shownLines = 0, alive = true, wentFull = false, mx = 0.5, my = 0.4, last = T0, typed = -1, nextGlitch = 4.6, nextBlink = 7.5, blinkT = -9;
+    let city = null, shownLines = 0, alive = true, wentFull = false, mx = 0.5, my = 0.4, last = T0, typed = -1, nextGlitch = 4.6, nextBlink = 7.5, blinkT = -9;
     store.set('usb.secret', (store.get('usb.secret', 0) || 0) + 1);
     { const w = store.get('ph.watch', null) || {}; w.seen = Date.now(); w.pending = true; store.set('ph.watch', w); }   // the site remembers (see watch.js)
 
@@ -686,7 +801,7 @@
     setTimeout(() => { crash.remove(); el.classList.remove('instant'); if (alive) SFX.play('haunt'); }, CRASH);
 
     let W = 0, H = 0;
-    function size(){ const d = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.round(window.innerWidth * d); H = cv.height = Math.round(window.innerHeight * d); }
+    function size(){ const d = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.round(window.innerWidth * d); H = cv.height = Math.round(window.innerHeight * d); if (city) city.size(); }
     size();
 
     // 3D rain: columns live in world space (x, y, z) and the camera flies forward through them
@@ -694,6 +809,8 @@
     const newCol = init => ({x: rnd(-1.9, 1.9), z: init ? rnd(NEAR + 0.05, FAR) : FAR, y: rnd(-1.4, 1.4), v: rnd(0.3, 0.85), len: ri(9, 24),
       g: Array.from({length: 26}, () => GL[Math.random() * GL.length | 0])});
     const cols = Array.from({length: 170}, () => newCol(true));
+    // the city loads while the crash screen is up; without WebGL the ending falls back to the rain alone
+    loadThree().then(THREE => { if (!alive) return; try{ city = makeCity(THREE, el, GL); city.size(); city.render(0, 0, mx, my); cols.splice(42); }catch(e){ city = null; } }).catch(() => {});
 
     function drawEye(t){
       const open = Math.max(0, Math.min(1, (t - 3.3) / 1.3));
@@ -730,7 +847,8 @@
         requestAnimationFrame(frame); return;
       }
       c.setTransform(1, 0, 0, 1, 0, 0);
-      c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+      if (city){ city.render(t, dt, mx, my); c.clearRect(0, 0, W, H); }      // rain and eye are drawn over the 3D city
+      else { c.fillStyle = '#000'; c.fillRect(0, 0, W, H); }
       // camera: slow roll + parallax from the mouse
       const camX = (mx - 0.5) * 0.35 + Math.sin(t * 0.31) * 0.06, camY = (my - 0.5) * 0.2, f = H * 0.6;
       c.translate(W / 2, H / 2); c.rotate(Math.sin(t * 0.23) * 0.07); c.translate(-W / 2, -H / 2);
@@ -782,6 +900,7 @@
     function close(){
       if (!alive || performance.now() - T0 < 2600) return;
       alive = false;
+      if (city){ const c3 = city; setTimeout(() => c3.dispose(), 470); }
       window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', size);
       document.removeEventListener('fullscreenchange', onFs);
       el.classList.remove('on');
