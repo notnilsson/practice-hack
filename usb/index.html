@@ -731,14 +731,17 @@
         }`
     });
 
-    // towers packed four deep on both sides of a narrow canyon, plus beams crossing it
-    const ROWS = 34, ROW = 13, LEN = ROWS * ROW, items = [];
-    for (let r = 0; r < ROWS; r++){
-      for (const sd of [-1, 1]) for (let k = 0; k < 4; k++){
-        const w = rnd(8, 12), d = rnd(8, 12), h = k === 0 ? rnd(125, 215) : rnd(60, 215);
-        items.push({x: sd * (6.5 + w / 2 + k * 13 + rnd(0, 1.5)), y: -90 + h / 2, z: -r * ROW + rnd(-1, 1), sx: w, sy: h, sz: d});
-      }
-      if (r % 5 === 2) items.push({x: 0, y: (Math.random() < .5 ? -1 : 1) * rnd(15, 42), z: -r * ROW, sx: rnd(14, 17), sy: rnd(1.5, 3.2), sz: rnd(2, 4)});
+    // The city is a grid of blocks (pitch P) separated by streets (width WS). It repeats every F units,
+    // and every tower is drawn at the copy nearest the camera, so it never ends.
+    const P = 34, WS = 14, R = 14, NB = 15, F = NB * P, B = P - WS, items = [];
+    const tower = (x, z, w, d) => { const h = Math.random() < 0.15 ? rnd(60, 95) : rnd(110, 215); items.push({bx: x, y: -90 + h / 2, bz: z, sx: w, sy: h, sz: d}); };
+    for (let i = 0; i < NB; i++) for (let j = 0; j < NB; j++){
+      const cx = (i + 0.5) * P, cz = (j + 0.5) * P;
+      if (Math.random() < 0.25) tower(cx, cz, B - rnd(0, 1.5), B - rnd(0, 1.5));                 // one massive tower
+      else for (const ox of [-1, 1]) for (const oz of [-1, 1]) tower(cx + ox * B / 4, cz + oz * B / 4, B / 2 - rnd(0.4, 1.6), B / 2 - rnd(0.4, 1.6));
+      const beamY = () => (Math.random() < .5 ? -1 : 1) * rnd(18, 44);
+      if (Math.random() < 0.22) items.push({bx: i * P, y: beamY(), bz: cz + rnd(-6, 6), sx: WS + 1.5, sy: rnd(1.5, 3.2), sz: rnd(2, 4)});   // beams across the streets
+      if (Math.random() < 0.22) items.push({bx: cx + rnd(-6, 6), y: beamY(), bz: j * P, sx: rnd(2, 4), sy: rnd(1.5, 3.2), sz: WS + 1.5});
     }
     const geo = new THREE.BoxGeometry(1, 1, 1);
     geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(Float32Array.from(items, () => Math.random() * 100), 1));
@@ -746,24 +749,70 @@
     mesh.frustumCulled = false; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     scene.add(mesh);
     const arr = mesh.instanceMatrix.array;
-    function write(){
+    function write(camX, camZ){
       for (let i = 0; i < items.length; i++){
         const it = items[i], o = i * 16;
-        arr[o] = it.sx; arr[o + 5] = it.sy; arr[o + 10] = it.sz; arr[o + 12] = it.x; arr[o + 13] = it.y; arr[o + 14] = it.z; arr[o + 15] = 1;
+        arr[o] = it.sx; arr[o + 5] = it.sy; arr[o + 10] = it.sz; arr[o + 15] = 1; arr[o + 13] = it.y;
+        arr[o + 12] = it.bx + F * Math.round((camX - it.bx) / F);
+        arr[o + 14] = it.bz + F * Math.round((camZ - it.bz) / F);
       }
       mesh.instanceMatrix.needsUpdate = true;
     }
+
+    // Flight path: along the street centre lines; at some intersections it sweeps a quarter circle left or right.
+    const path = {x: 0, z: 0, d: 0, rem: P, arc: null, decided: false};
+    const fwd = a => [Math.sin(a), -Math.cos(a)], rgt = a => [Math.cos(a), Math.sin(a)];
+    function advance(dist, t){
+      let guard = 0;
+      while (dist > 1e-6 && guard++ < 12){
+        if (path.arc){
+          const A = path.arc, dphi = Math.min(dist / R, Math.PI / 2 - A.phi);
+          A.phi += dphi; dist -= dphi * R;
+          const r = rgt(A.a0 + A.s * A.phi);
+          path.x = A.cx - A.s * R * r[0]; path.z = A.cz - A.s * R * r[1];
+          if (A.phi >= Math.PI / 2 - 1e-9){ path.d = (path.d + A.s + 4) % 4; path.arc = null; path.rem = P - R; path.decided = false; }
+        } else {
+          const a = path.d * Math.PI / 2, f = fwd(a);
+          const step = Math.min(dist, path.decided ? path.rem : path.rem - R);
+          path.x += f[0] * step; path.z += f[1] * step; path.rem -= step; dist -= step;
+          if (!path.decided && path.rem <= R + 1e-9){
+            path.decided = true;
+            if (t > 2.5 && Math.random() < 0.27){                     // turn here
+              const sgn = Math.random() < 0.5 ? -1 : 1, r = rgt(a);
+              path.arc = {a0: a, s: sgn, phi: 0, cx: path.x + sgn * R * r[0], cz: path.z + sgn * R * r[1]};
+            }
+          } else if (path.decided && path.rem <= 1e-9){ path.rem = P; path.decided = false; }
+        }
+      }
+      if (!path.arc){                                                // the city repeats, so wrapping is invisible
+        if (path.x > F) path.x -= F; else if (path.x < -F) path.x += F;
+        if (path.z > F) path.z -= F; else if (path.z < -F) path.z += F;
+      }
+    }
+    cam.rotation.order = 'YXZ';
     return {
       size(){ renderer.setSize(window.innerWidth, window.innerHeight, false); cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix(); },
-      render(t, dt, mx, my){
-        const v = 26 + 70 * Math.exp(-t * 1.1);                    // bursts in fast, then cruises
-        for (const it of items){ it.z += v * dt; if (it.z > 14) it.z -= LEN; }
-        write();
+      render(t, dt, mx, my, dry){
+        const lean0 = path.arc ? Math.sin(2 * path.arc.phi) : 0;
+        advance((26 + 70 * Math.exp(-t * 1.1)) * (1 - 0.28 * lean0) * dt, t);     // bursts in fast, cruises, eases off through turns
+        const A = path.arc, a = A ? A.a0 + A.s * A.phi : path.d * Math.PI / 2, sgn = A ? A.s : 0, lean = A ? Math.sin(2 * A.phi) : 0;
+        const r = rgt(a), sway = (Math.sin(t * 0.37) * 2.6 + (mx - 0.5) * 3) * (1 - 0.85 * lean);
+        cam.position.set(path.x + r[0] * sway, Math.sin(t * 0.23) * 6 + (0.5 - my) * 5, path.z + r[1] * sway);
+        cam.rotation.y = -(a + sgn * 0.22 * lean) + Math.sin(t * 0.19) * 0.06 - (mx - 0.5) * 0.25;   // looks into the turn
+        cam.rotation.x = Math.sin(t * 0.27) * 0.05 + (0.5 - my) * 0.12;
+        cam.rotation.z = -sgn * 0.4 * lean - Math.cos(t * 0.37) * 0.07;                              // banks into the turn
+        write(cam.position.x, cam.position.z);
         mat.uniforms.uTime.value = t;
-        cam.position.set(Math.sin(t * 0.37) * 3 + (mx - 0.5) * 3.5, Math.sin(t * 0.23) * 7 + (0.5 - my) * 6, 0);
-        cam.lookAt(cam.position.x * 0.2 + Math.sin(t * 0.19) * 5, cam.position.y * 0.6, -70);
-        cam.rotateZ(-Math.cos(t * 0.37) * 0.16);                   // bank into the turns
-        renderer.render(scene, cam);
+        if (!dry) renderer.render(scene, cam);
+      },
+      debug(){   // for testing: nearest wall to the camera
+        let clear = 1e9; const c = cam.position;
+        for (let i = 0; i < items.length; i++){
+          const o = i * 16; if (Math.abs(c.y - arr[o + 13]) > arr[o + 5] / 2) continue;
+          const dx = Math.max(0, Math.abs(c.x - arr[o + 12]) - arr[o] / 2), dz = Math.max(0, Math.abs(c.z - arr[o + 14]) - arr[o + 10] / 2);
+          clear = Math.min(clear, Math.hypot(dx, dz));
+        }
+        return {x: path.x, z: path.z, d: path.d, turning: !!path.arc, n: items.length, clear};
       },
       dispose(){ try{ geo.dispose(); mat.dispose(); atlas.dispose(); renderer.dispose(); renderer.forceContextLoss(); }catch(e){} renderer.domElement.remove(); }
     };
@@ -775,7 +824,7 @@
     const GL = 'ｦｧｨｩｪｫｬｭｮｯｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ0123456789:.=*+-<>¦';
     const LOG = profileLog();
     const MSG = 'A MYSTERIOUS ORGANISATION\nHAS THEIR EYES ON YOU';
-    let city = null, shownLines = 0, alive = true, wentFull = false, mx = 0.5, my = 0.4, last = T0, typed = -1, nextGlitch = 4.6, nextBlink = 7.5, blinkT = -9;
+    let drone = null, city = null, shownLines = 0, alive = true, wentFull = false, mx = 0.5, my = 0.4, last = T0, typed = -1, nextGlitch = 4.6, nextBlink = 7.5, blinkT = -9;
     store.set('usb.secret', (store.get('usb.secret', 0) || 0) + 1);
     { const w = store.get('ph.watch', null) || {}; w.seen = Date.now(); w.pending = true; store.set('ph.watch', w); }   // the site remembers (see watch.js)
 
@@ -798,7 +847,7 @@
       for (const [x, y] of [[0,0],[18,0],[0,18]]){ q.fillRect(x, y, 7, 7); q.fillStyle = '#fff'; q.fillRect(x+1, y+1, 5, 5); q.fillStyle = '#0a5fd0'; q.fillRect(x+2, y+2, 3, 3); } }
     setTimeout(() => el.classList.add('instant', 'on'), 450);
     setTimeout(() => { if (alive){ crash.classList.add('tear'); SFX.play('glitch'); } }, CRASH - 380);
-    setTimeout(() => { crash.remove(); el.classList.remove('instant'); if (alive) SFX.play('haunt'); }, CRASH);
+    setTimeout(() => { crash.remove(); el.classList.remove('instant'); if (alive) drone = SFX.drone(); }, CRASH);
 
     let W = 0, H = 0;
     function size(){ const d = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.round(window.innerWidth * d); H = cv.height = Math.round(window.innerHeight * d); if (city) city.size(); }
@@ -900,6 +949,7 @@
     function close(){
       if (!alive || performance.now() - T0 < 2600) return;
       alive = false;
+      if (drone) drone.stop();
       if (city){ const c3 = city; setTimeout(() => c3.dispose(), 470); }
       window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', size);
       document.removeEventListener('fullscreenchange', onFs);

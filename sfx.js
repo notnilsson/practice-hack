@@ -89,6 +89,45 @@
                       noise(6, {gain:0.02, freq:400, to:1800, q:3, attack:2}); },
   };
 
+  // Continuous eerie drone (no loop point: oscillators run until stopped). Returns {stop()}.
+  function drone(){
+    const c = ensure(); if (!c) return {stop(){}};
+    const t = c.currentTime, nodes = [];
+    const bus = c.createGain(); bus.gain.setValueAtTime(0.0001, t); bus.gain.exponentialRampToValueAtTime(0.85, t + 2.2); bus.connect(master);
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 520; lp.Q.value = 5; lp.connect(bus);
+    const osc = (type, f, g, dest) => { const o = c.createOscillator(), gn = c.createGain(); o.type = type; o.frequency.value = f; gn.gain.value = g; o.connect(gn); gn.connect(dest); o.start(t); nodes.push(o); return {o, gn}; };
+    // detuned low cluster: beats slowly against itself; upper partials carry on small speakers
+    osc('sawtooth', 55, 0.34, lp); osc('sawtooth', 55.7, 0.28, lp); osc('sawtooth', 82.4, 0.2, lp); osc('sawtooth', 110.6, 0.16, lp);
+    osc('square', 116.5, 0.07, lp); osc('sine', 41.2, 0.3, bus);
+    osc('sine', 0.07, 260, lp.frequency);                         // slow filter sweep
+    osc('sine', 0.13, 0.16, bus.gain);                            // slow swell
+    // thin, wavering high tones
+    const hi = osc('sine', 1244.5, 0.04, bus); osc('sine', 4.3, 8, hi.o.frequency); osc('sine', 0.11, 0.03, hi.gn.gain);
+    const hi2 = osc('sine', 932.3, 0.025, bus); osc('sine', 0.05, 0.02, hi2.gn.gain);
+    // wind
+    const ns = c.createBufferSource(); ns.buffer = noiseBuf; ns.loop = true;
+    const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 700; bp.Q.value = 2.5;
+    const ng = c.createGain(); ng.gain.value = 0.16; ns.connect(bp); bp.connect(ng); ng.connect(bus); ns.start(t); nodes.push(ns);
+    osc('sine', 0.09, 380, bp.frequency);
+    // occasional distant events on top
+    const events = [
+      () => tone(880, 2.6, {type:'sine', gain:0.06, attack:0.7, slide:820}),
+      () => { tone(170, 0.5, {type:'sine', gain:0.3, slide:70}); noise(0.35, {gain:0.12, type:'lowpass', freq:420}); },
+      () => noise(2.2, {gain:0.07, freq:2400, to:1500, q:7, attack:0.9}),
+      () => { tone(311, 3, {type:'triangle', gain:0.05, attack:1.2}); tone(329.6, 3, {type:'triangle', gain:0.05, attack:1.2}); },
+    ];
+    let timer = null;
+    const next = () => { timer = setTimeout(() => { try{ if (!muted) events[Math.random() * events.length | 0](); }catch(e){} next(); }, 3500 + Math.random() * 5000); };
+    next();
+    let stopped = false;
+    return {stop(){
+      if (stopped) return; stopped = true; clearTimeout(timer);
+      const n = c.currentTime;
+      try{ bus.gain.cancelScheduledValues(n); bus.gain.setValueAtTime(Math.max(0.0001, bus.gain.value), n); bus.gain.exponentialRampToValueAtTime(0.0001, n + 0.9); }catch(e){}
+      setTimeout(() => { nodes.forEach(x => { try{ x.stop(); }catch(e){} }); try{ bus.disconnect(); }catch(e){} }, 1100);
+    }};
+  }
+
   // countdown helper: call every frame with seconds left; ticks once per second in the last `from` seconds
   let lastWhole = null;
   function countdown(left, from = 10){
@@ -101,7 +140,7 @@
 
   window.SFX = {
     play(name){ try{ if (!muted && SOUNDS[name]) SOUNDS[name](); }catch(e){} },
-    countdown, resetCountdown,
+    countdown, resetCountdown, drone,
     get muted(){ return muted; },
     setMuted(m){ muted = !!m; store.set('sfx.muted', muted); applyVolume(); syncUI(); },
     setVolume(v){ volume = Math.max(0, Math.min(1, v)); store.set('sfx.volume', volume); if (volume > 0 && muted) muted = false, store.set('sfx.muted', false); applyVolume(); syncUI(); },
