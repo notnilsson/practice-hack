@@ -104,7 +104,7 @@
   .hx .log{position:absolute;left:3vw;top:3vh;font-size:clamp(11px,1.05vw,16px);line-height:1.55;white-space:pre;text-shadow:0 0 8px rgba(60,240,124,.75)}
   .hx .stage{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:13vh;perspective:900px;pointer-events:none}
   .hx .msg{text-align:center;transform-style:preserve-3d;animation:hxFloat 6s ease-in-out infinite}
-  .hx .big{font-size:clamp(18px,4vw,62px);font-weight:700;letter-spacing:.12em;line-height:1.3;min-height:2.6em;color:#dcffe8;text-shadow:0 0 12px rgba(60,240,124,.95),0 0 44px rgba(60,240,124,.5)}
+  .hx .big{display:block;position:static}
   .hx .big.glitch{animation:hxGlitch .24s steps(3) 1}
   @keyframes hxFloat{0%,100%{transform:rotateX(16deg) rotateY(-8deg) translateZ(0)}50%{transform:rotateX(7deg) rotateY(8deg) translateZ(70px)}}
   @keyframes hxGlitch{0%{transform:translate(-8px,2px) skewX(-14deg);text-shadow:-5px 0 #ff2a4d,5px 0 #9ff}50%{transform:translate(6px,-3px) skewX(10deg);text-shadow:5px 0 #ff2a4d,-5px 0 #9ff;opacity:.6}100%{transform:none}}
@@ -841,7 +841,7 @@
     setTimeout(() => $('screen').classList.remove('hacked'), 600);
 
     const el = document.createElement('div'); el.className = 'hx';
-    el.innerHTML = '<canvas></canvas><div class="vig"></div><div class="scan"></div><div class="log"></div><div class="stage"><div class="msg"><div class="big"></div></div></div><div class="hint">[ PRESS ANY KEY ]</div>' +
+    el.innerHTML = '<canvas></canvas><div class="vig"></div><div class="scan"></div><div class="log"></div><div class="stage"><div class="msg"><canvas class="big" role="img" aria-label="A mysterious organisation has their eyes on you"></canvas></div></div><div class="hint">[ PRESS ANY KEY ]</div>' +
       '<div class="crash"><div class="face">:(</div><p>Your PC ran into a problem and needs to restart. We\'re just collecting some info about you, and then we\'ll restart for you.</p>' +
       '<div class="pct"><span class="n">0</span>% complete</div><div class="info"><canvas width="25" height="25"></canvas><div>For more information about this issue, don\'t look it up.<br><br>If you call a support person, give them this info:<br>Stop code: OBSERVER_PROTOCOL_ENGAGED</div></div></div>';
     document.body.appendChild(el);
@@ -858,8 +858,91 @@
     setTimeout(() => { if (alive){ crash.classList.add('tear'); SFX.play('glitch'); } }, CRASH - 380);
     setTimeout(() => { crash.remove(); el.classList.remove('instant'); if (alive) drone = SFX.drone(); }, CRASH);
 
+    // ---- the message: drawn on its own canvas so code rain can stream through the letters ----
+    const mctx = bigEl.getContext('2d'), mk = document.createElement('canvas'), mkx = mk.getContext('2d'), rn = document.createElement('canvas'), rnx = rn.getContext('2d'), sk = document.createElement('canvas'), skx = sk.getContext('2d');
+    let MW = 0, MH = 0, fs = 0, mdpr = 1, mrain = [];
+    function sizeMsg(){
+      fs = Math.max(15, Math.min(44, window.innerWidth * 0.028));
+      mdpr = Math.min(2, window.devicePixelRatio || 1);
+      const cssW = Math.round(Math.min(window.innerWidth * 0.94, fs * 0.75 * 26 + fs * 3)), cssH = Math.round(fs * 1.4 * 2 + fs * 1.6);
+      bigEl.style.width = cssW + 'px'; bigEl.style.height = cssH + 'px';
+      MW = Math.round(cssW * mdpr); MH = Math.round(cssH * mdpr);
+      for (const k of [bigEl, mk, rn, sk]){ k.width = MW; k.height = MH; }
+      const gs = fs * 0.52 * mdpr, ncol = Math.ceil(MW / gs);
+      mrain = Array.from({length: ncol}, (_, i) => ({x: (i + 0.5) * gs, y: rnd(-MH, MH), v: rnd(5, 11) * fs * mdpr, len: ri(5, 13),
+        g: Array.from({length: 16}, () => GL[Math.random() * GL.length | 0])}));
+    }
+    sizeMsg();
+    function textLayer(g, m, color){
+      const lines = MSG.slice(0, m).split('\n'), lh = fs * 1.4 * mdpr, top = (MH - lh * 2) / 2 + lh / 2;
+      g.font = `700 ${fs * mdpr}px "Lucida Console","Courier New",ui-monospace,monospace`;
+      try{ g.letterSpacing = `${0.12 * fs * mdpr}px`; }catch(e){}
+      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = color;
+      const full = MSG.split('\n');
+      lines.forEach((ln, i) => {
+        // keep each line's final position while it's being typed: pad with the remaining (invisible) characters
+        const w = g.measureText(full[i]).width, x0 = MW / 2 - w / 2;
+        g.textAlign = 'left'; g.fillText(ln, x0, top + i * lh);
+        if (i === lines.length - 1 && m < MSG.length && m > 0){
+          const cw = g.measureText(ln).width; g.fillRect(x0 + cw + fs * 0.05 * mdpr, top + i * lh - fs * 0.45 * mdpr, fs * 0.55 * mdpr, fs * 0.9 * mdpr);
+        }
+      });
+    }
+    function drawMsg(t, dt, m){
+      mctx.setTransform(1, 0, 0, 1, 0, 0); mctx.clearRect(0, 0, MW, MH);
+      if (m <= 0) return;
+      // 1. rain columns (offscreen)
+      const gs = fs * 0.52 * mdpr;
+      rnx.globalCompositeOperation = 'source-over'; rnx.clearRect(0, 0, MW, MH);
+      rnx.font = `${gs}px "MS Gothic","Yu Gothic","Noto Sans Mono CJK JP","Lucida Console",monospace`;
+      rnx.textAlign = 'center'; rnx.textBaseline = 'middle';
+      for (const col of mrain){
+        col.y += col.v * dt;
+        if (col.y - col.len * gs > MH){ col.y = -rnd(0, MH * 0.6); col.v = rnd(5, 11) * fs * mdpr; col.len = ri(5, 13); }
+        if (Math.random() < 0.15) col.g[Math.random() * col.g.length | 0] = GL[Math.random() * GL.length | 0];
+        for (let i = 0; i < col.len; i++){
+          const y = col.y - i * gs; if (y < -gs || y > MH + gs) continue;
+          rnx.globalAlpha = i === 0 ? 1 : (1 - i / col.len) * 0.9;
+          rnx.fillStyle = i === 0 ? '#f2fff6' : i < 3 ? '#9dffc0' : '#35e374';
+          rnx.fillText(col.g[i % col.g.length], col.x, y);
+        }
+      }
+      rnx.globalAlpha = 1;
+      // 2. mask of the typed letters
+      mkx.clearRect(0, 0, MW, MH); textLayer(mkx, m, '#fff');
+      const glitch = bigEl.classList.contains('glitch');
+      // 3. glowing base letters (dimmer than before, so the streams inside them read)
+      mctx.save(); mctx.shadowColor = 'rgba(60,240,124,.9)'; mctx.shadowBlur = fs * 0.55 * mdpr;
+      if (glitch){
+        mctx.globalCompositeOperation = 'lighter';
+        mctx.globalAlpha = 0.7; mctx.drawImage(mk, -fs * 0.18 * mdpr, 0); mctx.drawImage(mk, fs * 0.18 * mdpr, 0);
+        mctx.globalCompositeOperation = 'source-in'; mctx.fillStyle = 'rgba(255,60,90,.9)'; mctx.fillRect(0, 0, MW / 2, MH); mctx.fillStyle = 'rgba(120,255,255,.9)'; mctx.fillRect(MW / 2, 0, MW / 2, MH);
+        mctx.globalCompositeOperation = 'source-over'; mctx.globalAlpha = 1;
+      }
+      textLayer(mctx, m, 'rgba(95,235,150,.62)');
+      mctx.restore();
+      // 4. the rain columns light up the letters as they fall through them: bright head, fading trail
+      skx.clearRect(0, 0, MW, MH);
+      for (const col of mrain){
+        const y1 = col.y + gs * 0.5, y0 = y1 - col.len * gs * 1.3; if (y1 < 0 || y0 > MH) continue;
+        const g = skx.createLinearGradient(0, y0, 0, y1);
+        g.addColorStop(0, 'rgba(40,230,110,0)'); g.addColorStop(0.75, 'rgba(70,255,140,.8)'); g.addColorStop(0.94, 'rgba(200,255,220,1)'); g.addColorStop(1, 'rgba(255,255,255,1)');
+        skx.fillStyle = g; skx.fillRect(col.x - gs * 0.5, y0, gs, y1 - y0);
+      }
+      mkx.globalCompositeOperation = 'source-in'; mkx.drawImage(sk, 0, 0); mkx.globalCompositeOperation = 'source-over';
+      mctx.save(); mctx.globalCompositeOperation = 'lighter'; mctx.shadowColor = 'rgba(120,255,170,.9)'; mctx.shadowBlur = fs * 0.4 * mdpr;
+      mctx.drawImage(mk, 0, 0); mctx.restore();
+      // 5. the same rain faintly over everything, fading out toward the canvas edges
+      rnx.globalCompositeOperation = 'destination-in';
+      const gx = rnx.createLinearGradient(0, 0, MW, 0);
+      gx.addColorStop(0, 'rgba(0,0,0,0)'); gx.addColorStop(0.12, 'rgba(0,0,0,.42)'); gx.addColorStop(0.88, 'rgba(0,0,0,.42)'); gx.addColorStop(1, 'rgba(0,0,0,0)');
+      rnx.fillStyle = gx; rnx.fillRect(0, 0, MW, MH);
+      rnx.globalCompositeOperation = 'source-over';
+      mctx.drawImage(rn, 0, 0);
+      mctx.globalCompositeOperation = 'source-over';
+    }
     let W = 0, H = 0;
-    function size(){ const d = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.round(window.innerWidth * d); H = cv.height = Math.round(window.innerHeight * d); if (city) city.size(); }
+    function size(){ const d = Math.min(2, window.devicePixelRatio || 1); W = cv.width = Math.round(window.innerWidth * d); H = cv.height = Math.round(window.innerHeight * d); if (city) city.size(); sizeMsg(); }
     size();
 
     // 3D rain: columns live in world space (x, y, z) and the camera flies forward through them
@@ -875,7 +958,7 @@
       if (open <= 0) return;
       const bl = t - blinkT, blink = bl < 0.24 ? Math.abs(bl - 0.12) / 0.12 : 1;
       const o = (1 - Math.pow(1 - open, 3)) * (0.08 + 0.92 * blink);
-      const cx = W / 2, cy = H * 0.36, ew = Math.min(W * 0.4, H * 0.78), eh = ew * 0.42 * o, r = ew * 0.15;
+      const cx = W / 2, cy = H * 0.35, ew = Math.min(W * 0.29, H * 0.56), eh = ew * 0.42 * o, r = ew * 0.15;
       const path = () => { c.beginPath(); c.moveTo(cx - ew / 2, cy); c.quadraticCurveTo(cx, cy - eh * 1.15, cx + ew / 2, cy); c.quadraticCurveTo(cx, cy + eh * 1.15, cx - ew / 2, cy); c.closePath(); };
       c.save();
       path(); c.fillStyle = 'rgba(0,10,4,.86)'; c.fill();
@@ -945,11 +1028,12 @@
       logEl.textContent = out.join('\n');
       const m = Math.max(0, Math.min(MSG.length, Math.floor((t - 2.9) * 19)));
       if (m !== typed){
-        typed = m; bigEl.innerHTML = MSG.slice(0, m).replace('\n', '<br>') + (m < MSG.length && m > 0 ? '█' : '');
+        typed = m;
         if (m > 0 && m % 2 === 0) SFX.play('key');
         if (m === MSG.length){ SFX.play('glitch'); bigEl.classList.add('glitch'); setTimeout(() => bigEl.classList.remove('glitch'), 260); }
       }
       if (t > nextGlitch && m === MSG.length){ nextGlitch = t + rnd(1.6, 3.6); bigEl.classList.add('glitch'); setTimeout(() => bigEl.classList.remove('glitch'), 260); }
+      drawMsg(t, dt, m);
       if (t > 6.2) hintEl.classList.add('on');
       requestAnimationFrame(frame);
     }
