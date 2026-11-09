@@ -68,7 +68,7 @@
   .thumbs{position:absolute;left:0;right:0;bottom:3.6cqw;display:flex;justify-content:center;gap:1.4cqw}
   .thumbs canvas{width:6.2cqw;height:5cqw;border:1px solid rgba(60,240,124,.3);background:#18301e;cursor:pointer}
   .thumbs canvas:hover{border-color:var(--g)}
-  .cyc{position:absolute;right:1.2cqw;top:16%;display:flex;flex-direction:column;gap:.8cqw}
+  .cyc{position:absolute;right:1.2cqw;top:9%;display:flex;flex-direction:row;gap:.6cqw}
   .cyc button,.confirm{font-family:inherit;font-size:1.25cqw;color:var(--g);background:rgba(10,30,15,.8);border:1px solid rgba(60,240,124,.5);border-radius:3px;padding:.5cqw .9cqw;cursor:pointer;letter-spacing:.06em}
   .cyc button:hover,.confirm:hover{background:rgba(60,240,124,.15)}
   .confirm{position:absolute;right:1.2cqw;bottom:3.6cqw}
@@ -139,10 +139,10 @@
           <h3 class="glow">SELECT RING FRAGMENT</h3>
           <div class="fragno" id="fragno">FRAGMENT 01 / 05</div>
           <div class="card" id="card"><canvas id="cand"></canvas></div>
-          <div class="cyc"><button id="up" title="Previous (W / ↑)">▲</button><button id="down" title="Next (S / ↓)">▼</button></div>
+          <div class="cyc"><button id="up" title="Previous (← / A)">◀</button><button id="down" title="Next (→ / D)">▶</button></div>
           <div class="thumbs"><canvas id="thPrev" title="Previous fragment"></canvas><canvas id="thNext" title="Next fragment"></canvas></div>
           <button class="confirm" id="confirm">CONFIRM ⏎</button>
-          <div class="hint">[W/S or ↑/↓] CYCLE FRAGMENT &nbsp;[ENTER] CONFIRM MATCH</div>
+          <div class="hint">[←/→] CYCLE FRAGMENT &nbsp;[ENTER] CONFIRM MATCH</div>
         </div>
       </div>
       <div class="lives" id="lives"></div>
@@ -178,7 +178,7 @@
       <div class="rules">
         <b>Step 1 – terminal:</b> type each <b>[TASK]</b> line exactly and press Enter (3 attempts; type <b>help</b> to see the tasks again).<br>
         <b>Step 2 – rings:</b> rebuild the captured signature from the <b>inside out</b>. For each of the 4 rings, cycle the fragments with
-        <b>W/S</b> or <b>↑/↓</b> (or the ▲▼ buttons / thumbnails) and press <b>Enter</b> when the fragment matches that ring on the left.
+        the <b>←/→</b> arrow keys (or A/D, the ◀▶ buttons or the thumbnails) and press <b>Enter</b> when the fragment matches that ring on the left.
         Decoys differ by a small detail — an arc gap, a tick, a yellow square or a marker. Compare one feature at a time.
         R = restart (outside the terminal).
       </div>
@@ -593,8 +593,8 @@
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (game.phase === 'rings'){
-      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp'){ e.preventDefault(); cycle(-1); }
-      else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown'){ e.preventDefault(); cycle(1); }
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A'){ e.preventDefault(); cycle(-1); }
+      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D'){ e.preventDefault(); cycle(1); }
       else if (e.key === 'Enter'){ e.preventDefault(); confirm(); }
     }
     if ((e.key === 'r' || e.key === 'R') && game.phase !== 'term') newGame();
