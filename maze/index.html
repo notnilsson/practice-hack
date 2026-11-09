@@ -119,6 +119,7 @@
   </details>
 </main>
 
+<script src="../sfx.js"></script>
 <script>
 (() => {
   const LOGICAL = 570, PAD = 3, WALL_T = 3;
@@ -317,6 +318,7 @@
     if (state !== 'running' || now - lastHit < HIT_COOLDOWN) return;
     lastHit = now; hits++; penaltyTotal += cfg.penalty;
     flashUntil = now + FLASH_MS;
+    SFX.play('thud');
   }
 
   // ---------- timing / state ----------
@@ -326,6 +328,7 @@
   function finish(won){
     elapsedBase = usedTime();
     state = won ? 'won' : 'lost';
+    SFX.play(won ? 'win' : 'lose');
     dragging = false;
     cv.classList.remove('dragging');
     const key = String(cfg.n);
@@ -365,6 +368,7 @@
       const [ex, ey] = cellCenter(cornerCell(exitCorner));
       if (Math.hypot(ball.x-ex, ball.y-ey) < cell*0.33) finish(true);
       else if (usedTime() >= cfg.time) finish(false);
+      if (state === 'running') SFX.countdown(cfg.time - usedTime());
     }
     cv.classList.toggle('hit', now < flashUntil);
     updateHud();
@@ -434,7 +438,8 @@
     target = {x: ball.x, y: ball.y};
     grabOffset = {x: ball.x - p.x, y: ball.y - p.y};
     cv.classList.add('dragging');
-    if (state === 'ready'){ state = 'running'; runStart = performance.now(); $('hint').style.opacity = 0; }
+    if (state === 'ready'){ state = 'running'; runStart = performance.now(); $('hint').style.opacity = 0; SFX.resetCountdown(); SFX.play('start'); }
+    else SFX.play('click');
   });
   let grabOffset = {x:0, y:0};
   cv.addEventListener('pointermove', e => {

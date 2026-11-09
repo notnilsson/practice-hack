@@ -32,6 +32,12 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 2. Add an entry to the `GAMES` list in the root `index.html`, with `job` set to the job it belongs to (add the job to `JOBS` if it's new).
 3. Add a row to the matching job table above.
 
+## Sound
+
+All games share `sfx.js`, which synthesizes every sound effect with the Web Audio API (no audio files).
+Each game shows a mute button and volume slider in the bottom-right corner (or press **M**); the setting is shared across all games.
+To add sound to a new game, include `<script src="../sfx.js"></script>` and call `SFX.play('ok')`, `SFX.play('bad')`, `SFX.play('win')` etc.
+
 ## Hosting
 
 Settings → Pages → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`.

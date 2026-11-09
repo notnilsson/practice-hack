@@ -105,6 +105,7 @@
   </details>
 </main>
 
+<script src="../sfx.js"></script>
 <script>
 (() => {
   const L = 568, CX = L/2, R = 16;
@@ -239,10 +240,12 @@
     const ok = (kind === 'orange') === passed;
     if (ok){
       progress++;
+      SFX.play(kind === 'orange' ? 'pop' : 'click');
       if (progress >= cfg.per) phaseCleared();
     } else {
       mistakes++;
       missUntil = now() + 0.3;
+      SFX.play('bad');
       cv.classList.add('miss'); setTimeout(() => cv.classList.remove('miss'), 250);
       if (cfg.fail) return lose(kind === 'red' ? 'A red ball got in.' : 'An orange ball was blocked.');
       progress = Math.max(0, progress - cfg.penalty);
@@ -253,6 +256,7 @@
   function phaseCleared(){
     paintBars();
     if (phase + 1 >= cfg.phases) return win();
+    SFX.play('stage');
     state = 'between';
     holding = false;
     showOverlay(`Phase ${phase+1} Cleared`, 'plain', '', [], true);
@@ -268,15 +272,18 @@
     holding = false;
     resetPhase(); buildBars();
     state = 'running'; t0 = now();
+    SFX.play('start');
   }
 
   function win(){
     endTime = now() - t0; state = 'won'; holding = false;
+    SFX.play('win');
     const pb = record(true);
     showOverlay('Safe opened', '', `${endTime.toFixed(1)}s · ${mistakes} mistake${mistakes===1?'':'s'}${pb ? ' · new best!' : ''}`);
   }
   function lose(why){
     endTime = now() - t0; state = 'lost'; holding = false;
+    setTimeout(() => SFX.play('lose'), 250);
     record(false);
     showOverlay('Hack failed', 'fail', why + ` Phase ${phase+1}/${cfg.phases}, ${progress}/${cfg.per}.`);
   }
@@ -352,8 +359,8 @@
   }
 
   // ---------- input ----------
-  const press = () => { if (state === 'running' || state === 'between') holding = true; };
-  const release = () => { holding = false; };
+  const press = () => { if ((state === 'running' || state === 'between') && !holding){ holding = true; SFX.play('open'); } };
+  const release = () => { if (holding && (state === 'running' || state === 'between')) SFX.play('close'); holding = false; };
   cv.addEventListener('pointerdown', e => { if (e.button !== 0 && e.pointerType === 'mouse') return; e.preventDefault(); try{ cv.setPointerCapture(e.pointerId); }catch(_){} press(); });
   cv.addEventListener('pointerup', release);
   cv.addEventListener('pointercancel', release);

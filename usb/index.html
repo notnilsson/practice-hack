@@ -186,6 +186,7 @@
   </details>
 </main>
 
+<script src="../sfx.js"></script>
 <script>
 (() => {
   const DEFAULTS = {frags:5, time:120, lives:2, diff:1, skip:false};
@@ -447,7 +448,9 @@
   function updateStatus(){ $('status').textContent = `PHASE 1 / CLI attempts=${game.attempts}`; }
 
   $('cmd').addEventListener('keydown', e => {
+    if (game.phase === 'term' && !e.repeat && (e.key.length === 1 || e.key === 'Backspace')) SFX.play('key');
     if (e.key !== 'Enter' || game.phase !== 'term') return;
+    SFX.play('enter');
     e.preventDefault();
     const raw = $('cmd').value; const cmd = raw.trim(); $('cmd').value = '';
     tline(`  root@bobcat:~# ${raw}`);
@@ -456,12 +459,14 @@
     if (cmd === 'clear'){ startTerminalKeep(); return; }
     if (cmd === game.tasks[game.task]){
       tline('  OK', 'ok'); game.task++;
+      SFX.play('ok');
       if (game.task >= game.tasks.length){
         game.phase = 'auth'; $('cmd').blur();
-        setTimeout(() => { show('auth'); setTimeout(startRings, 1400); }, 450);
+        setTimeout(() => { show('auth'); SFX.play('granted'); setTimeout(startRings, 1400); }, 450);
       }
     } else {
       game.attempts--; updateStatus();
+      SFX.play('bad');
       if (game.attempts <= 0){
         tline('  FAIL — no attempts left. Session terminated.', 'err');
         failRun('Too many wrong commands.');
@@ -481,6 +486,7 @@
   // ---------- rings ----------
   function startRings(){
     game.phase = 'rings'; game.ring = 0; game.idx = 0; game.ringStart = performance.now();
+    SFX.resetCountdown(); SFX.play('start');
     show('rings');
     renderLives();
     requestAnimationFrame(() => { drawTarget(); renderRing(); });
@@ -507,17 +513,20 @@
     if (game.phase !== 'rings') return;
     const n = game.options[game.ring].opts.length;
     game.idx = (game.idx + d + n) % n; renderRing(true);
+    SFX.play('cycle');
   }
   function confirm(){
     if (game.phase !== 'rings') return;
     const o = game.options[game.ring];
     if (game.idx === o.correct){
       banner(`RING ${game.ring + 1} MATCHED`);
+      if (game.ring + 1 < RADII.length) SFX.play('confirm');
       game.ring++; game.idx = 0;
       if (game.ring >= RADII.length) return winRun();
       renderRing(true);
     } else {
       game.lives--; renderLives();
+      SFX.play('bad');
       banner('SIGNATURE MISMATCH', true);
       if (game.lives < 0) failRun(`Wrong fragment on ring ${game.ring + 1}. The correct one was fragment ${String(o.correct + 1).padStart(2, '0')} — it's shown now.`, true);
     }
@@ -529,6 +538,7 @@
 
   function winRun(){
     game.phase = 'done'; game.end = (performance.now() - game.start) / 1000;
+    SFX.play('granted');
     const ringTime = (performance.now() - game.ringStart) / 1000;
     const pb = record(true, game.end);
     setTimeout(() => showOv('ACCESS GRANTED', `Total ${game.end.toFixed(1)}s (rings ${ringTime.toFixed(1)}s)${pb ? ' · new best!' : ''}`, [['Again', newGame, true]]), 500);
@@ -536,6 +546,7 @@
   function failRun(why, revealCorrect){
     const wasRings = game.phase === 'rings';
     game.phase = 'done';
+    setTimeout(() => SFX.play('denied'), 200);
     record(false);
     if (wasRings && revealCorrect){ game.idx = game.options[game.ring].correct; renderRing(); }
     setTimeout(() => showOv('ACCESS DENIED', why, wasRings
@@ -568,6 +579,7 @@
       $('clock').textContent = `${m}:${String(s).padStart(2, '0')}`;
       $('clock').classList.toggle('low', left < 15);
       if (left <= 0) failRun("Time's up.", true);
+      else SFX.countdown(left);
     }
     requestAnimationFrame(tick);
   }

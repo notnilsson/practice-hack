@@ -139,6 +139,7 @@
   </details>
 </main>
 
+<script src="../sfx.js"></script>
 <script>
 (() => {
   const DEFAULTS = {n:7, k:7, watch:2.4, mem:1.1, time:35, lives:0};
@@ -179,6 +180,7 @@
     let inn;
     do { inn = Math.random()*cfg.n*cfg.n|0; } while (lit.has(inn));
     lit.delete(out); lit.add(inn);
+    SFX.play('blip');
   }
 
   function paintLit(mem){
@@ -197,6 +199,7 @@
     $('tfill').style.width = '100%';
     $('tLeft').textContent = cfg.time + 's';
     phase = cfg.watch > 0 ? 'watch' : 'mem';
+    SFX.play('start'); SFX.resetCountdown();
     phaseStart = now(); nextShuffle = phaseStart + SHUFFLE_EVERY;
     if (phase === 'watch'){ setPhaseText('Watch the pattern...'); $('pbar').style.visibility = 'visible'; paintLit(false); }
     else { setPhaseText('Memorize the squares', true); $('pbar').style.visibility = 'hidden'; paintLit(true); }
@@ -207,6 +210,7 @@
     cells.forEach(c => c.className = 'cell');
     gridEl.className = 'grid input';
     setPhaseText('Select the highlighted squares');
+    SFX.play('confirm');
     updateCount();
   }
   function updateCount(){ $('count').innerHTML = `<b>${picked.size}</b>/ ${lit.size}`; }
@@ -215,10 +219,12 @@
     if (phase !== 'input' || picked.has(i)) return;
     if (lit.has(i)){
       picked.add(i); cells[i].classList.add('sel'); updateCount();
+      if (picked.size < lit.size) SFX.play('select');
       if (picked.size === lit.size) win();
     } else {
       wrong++;
       cells[i].classList.add('bad');
+      SFX.play('bad');
       if (wrong > cfg.lives) lose('Wrong square.');
       else setTimeout(() => cells[i].classList.remove('bad'), 450);
     }
@@ -226,6 +232,7 @@
 
   function win(){
     phase = 'done'; endTime = now() - inputStart;
+    SFX.play('win');
     gridEl.className = 'grid';
     picked.forEach(i => { cells[i].className = 'cell ok'; });
     const pb = record(true);
@@ -236,6 +243,7 @@
   }
   function lose(why){
     phase = 'done'; endTime = now() - inputStart;
+    setTimeout(() => SFX.play('lose'), why.startsWith('Time') ? 0 : 250);
     gridEl.className = 'grid';
     lit.forEach(i => { if (!picked.has(i)) cells[i].classList.add('miss'); });
     record(false);
@@ -294,6 +302,7 @@
       if (changed) paintLit(false);
       if (e >= cfg.watch){
         phase = 'mem'; phaseStart = t;
+        SFX.play('ok');
         setPhaseText('Memorize the squares', true); $('pbar').style.visibility = 'hidden'; paintLit(true);
       }
     } else if (phase === 'mem'){
@@ -307,6 +316,7 @@
       $('tfill').style.width = (left / cfg.time * 100) + '%';
       $('tLeft').textContent = Math.ceil(left) + 's';
       if (left <= 0) lose("Time's up.");
+      else SFX.countdown(left);
     }
     requestAnimationFrame(tick);
   }

@@ -135,6 +135,7 @@
   </details>
 </main>
 
+<script src="../sfx.js"></script>
 <script>
 (() => {
   const CODES = ['FF','E9','BD','1C','55','7A'];
@@ -275,6 +276,7 @@
     hideOverlay(); clearMarks();
     state = 'running'; stage = 0; totalTime = 0;
     buildBars(); loadStage();
+    SFX.resetCountdown(); SFX.play('start');
   }
 
   function pick(i){
@@ -291,6 +293,7 @@
     }
     picks.push(i);
     paint();
+    if (picks.length < 4) SFX.play('select'); else if (stage + 1 < cfg.stages) SFX.play('stage');
     if (picks.length === 4){
       totalTime += (performance.now() - stageStart) / 1000;
       bars[stage].classList.remove('cur'); bars[stage].classList.add('done');
@@ -315,6 +318,7 @@
 
   function fail(why){
     state = 'failed';
+    SFX.play(why.startsWith("Time") ? 'lose' : 'bad');
     bars[stage].classList.add('failed');
     record(false);
     revealSolution();
@@ -327,6 +331,7 @@
 
   function win(){
     state = 'won';
+    SFX.play('win');
     const pb = record(true);
     hovered = -1; paint();
     showOverlay({text:'Hack successful!', win:true},
@@ -363,6 +368,7 @@
         bars.forEach((b, s) => b.classList.toggle('cur', s === stage));
         bars[stage].querySelector('i').style.width = Math.min(100, el / cfg.time * 100) + '%';
         if (el >= cfg.time) fail("Time's up.");
+        else SFX.countdown(left);
       }
     } else if (state === 'failed') left = 0;
     $('hTime').textContent = left.toFixed(1) + 's';

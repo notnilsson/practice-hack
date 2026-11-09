@@ -98,6 +98,7 @@
   </details>
 </main>
 
+<script src="../sfx.js"></script>
 <script>
 (() => {
   const L = 568;                         // logical board size
@@ -203,6 +204,7 @@
     phase = 0; penalty = 0; misses = 0; clicks = 0; endTime = 0;
     newPhase();
     state = 'running'; t0 = now();
+    SFX.resetCountdown(); SFX.play('start');
   }
 
   function attempt(){
@@ -213,13 +215,16 @@
     if (Math.abs(c - L/2) <= cfg.tol){
       locked[active] = true; lockAnim[active] = {from: c, t};
       active++;
+      SFX.play('lock');
       if (active >= cfg.cols){
         if (phase + 1 >= cfg.phases) return win();
+        SFX.play('stage');
         state = 'between';
         setTimeout(() => { if (state !== 'between') return; phase++; newPhase(); state = 'running'; }, 500);
       }
     } else {
       misses++; penalty += cfg.penalty;
+      SFX.play('bad');
       flashCol = active; flashUntil = t + 0.25;
       cv.classList.add('miss'); setTimeout(() => cv.classList.remove('miss'), 250);
     }
@@ -228,6 +233,7 @@
   function win(){
     endTime = now() - t0 + penalty;
     state = 'won';
+    SFX.play('win');
     const pb = record(true);
     const acc = clicks ? Math.round((clicks - misses) / clicks * 100) : 100;
     showOverlay('All Phases Cleared', '',
@@ -236,6 +242,7 @@
   function lose(){
     endTime = cfg.time;
     state = 'lost';
+    SFX.play('lose');
     record(false);
     showOverlay("Time's up", 'fail',
       `Locked ${active} of ${cfg.cols} columns${cfg.phases > 1 ? ` in phase ${phase+1}/${cfg.phases}` : ''} · ${misses} miss${misses===1?'':'es'}`);
@@ -280,6 +287,7 @@
 
   function frame(){
     if (state === 'running' && elapsed() >= cfg.time) lose();
+    if (state === 'running') SFX.countdown(cfg.time - elapsed());
     const used = Math.min(elapsed(), cfg.time);
     $('barFill').style.width = (used / cfg.time * 100) + '%';
     $('hTime').textContent = Math.max(0, cfg.time - used).toFixed(1) + 's';
