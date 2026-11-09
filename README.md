@@ -9,6 +9,7 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 |------|--------|-------------|
 | Hex Sequence | [`sequence/`](sequence/) | Enter a 4-code sequence on a 5×5 grid: 1→2 same column, 2→3 same row, 3→4 same column. |
 | Thermite | [`thermite/`](thermite/) | Memorize where the shuffling squares end up on a 7×7 grid, then click them all. |
+| USB Drive – Ring Match | [`usb/`](usb/) | Type the listed terminal commands, then match 4 signature rings (inner to outer) by cycling 5 fragments per ring. |
 
 ### Arms Deal
 | Game | Folder | Description |

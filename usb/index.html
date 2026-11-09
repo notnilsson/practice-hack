@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0e1014">
+<title>USB Ring Match – Bobcat Practice</title>
+<style>
+  :root{--w:960px;--g:#3cf07c;--g2:#9ff5bf;--gd:#1f7a3f;--text:#dcdcdc;--muted:#8b8b8b;--yel:#d9e46a;--red:#ff4d5e}
+  *{box-sizing:border-box}
+  html{background:#08090b}
+  html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:radial-gradient(ellipse at 50% 30%,#18201a 0%,#0c0e0c 65%,#080907 100%) fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .topbar{width:var(--w);display:flex}
+  .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
+    background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
+  .back svg{width:16px;height:16px;transition:transform .15s}
+  .back:hover{background:rgba(60,240,124,.1);border-color:var(--g);color:#fff}
+  .back:hover svg{transform:translateX(-2px)}
+  .back:focus-visible{outline:2px solid var(--g);outline-offset:2px}
+
+  /* CRT screen */
+  .screen{position:relative;width:var(--w);aspect-ratio:4/3;background:radial-gradient(ellipse at 50% 45%,#1d2a20 0%,#151d17 60%,#0e140f 100%);
+    border:10px solid #d9dccf;border-radius:14px;box-shadow:0 0 0 2px #b9bcb0,0 20px 60px rgba(0,0,0,.6);overflow:hidden;container-type:inline-size;
+    font-family:"Lucida Console","Courier New",ui-monospace,monospace;color:var(--g)}
+  .screen::after{content:"";position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
+  .view{position:absolute;inset:0;display:none}
+  .view.show{display:block}
+  .glow{text-shadow:0 0 .5cqw rgba(60,240,124,.55)}
+
+  /* terminal */
+  #term{padding:2.6cqw 3cqw;font-size:1.75cqw;line-height:1.45}
+  #termOut{white-space:pre-wrap;word-break:break-word;height:calc(100% - 7cqw);overflow:hidden}
+  #termOut .dim{color:#7fd39b}
+  #termOut .err{color:#ff8f8f;text-shadow:0 0 .5cqw rgba(255,80,80,.5)}
+  #termOut .ok{color:#b6ffcf}
+  .prompt{position:absolute;left:3cqw;right:3cqw;bottom:3.6cqw;display:flex;align-items:center;font-size:1.75cqw}
+  .prompt span{white-space:pre}
+  #cmd{flex:1;background:transparent;border:none;outline:none;color:var(--g);font:inherit;caret-color:var(--g);padding:0;text-shadow:0 0 .5cqw rgba(60,240,124,.55)}
+  .status{position:absolute;left:3cqw;bottom:1.8cqw;font-size:1.1cqw;color:#5fbf80;letter-spacing:.05em}
+  #auth{display:none;align-items:center;justify-content:center;font-size:2.2cqw;letter-spacing:.12em}
+  #auth.show{display:flex}
+
+  /* ring phase */
+  #rings{padding:2cqw 2.4cqw}
+  .rhead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid rgba(60,240,124,.25);padding-bottom:1cqw}
+  .rhead .l b{display:block;font-size:1.7cqw;color:#e2f5e6;letter-spacing:.08em}
+  .rhead .l small{font-size:1.1cqw;color:#6fd795}
+  .rhead .r{text-align:right}
+  .rhead .r b{display:block;font-size:1.5cqw;letter-spacing:.08em}
+  .rhead .r .clock{font-size:2.4cqw;color:#d9e46a;text-shadow:0 0 .6cqw rgba(217,228,106,.5)}
+  .rhead .r .clock.low{color:var(--red);text-shadow:0 0 .6cqw rgba(255,77,94,.5)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:1.6cqw;margin-top:1.2cqw;height:calc(100% - 11cqw)}
+  .col{border:1px solid rgba(60,240,124,.35);position:relative;padding:1.2cqw}
+  .col h3{margin:0;font-size:1.2cqw;letter-spacing:.1em;font-weight:700;color:#7ff0a8}
+  .fragno{text-align:center;font-size:1.35cqw;color:#e2f5e6;letter-spacing:.12em;margin-top:.4cqw}
+  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1}
+  .hex{position:absolute;left:0;right:0;bottom:1.2cqw;text-align:center;font-size:.95cqw;color:#4fae6f;letter-spacing:.08em}
+  .card{position:absolute;left:6%;top:16%;width:88%;aspect-ratio:1.18;background:linear-gradient(160deg,#256b35,#1c5a2b);border:1px solid #4fd37e;box-shadow:0 0 2cqw rgba(60,240,124,.15) inset;
+    transition:transform .12s ease-out,opacity .12s;display:flex;align-items:center;justify-content:center}
+  .card.flip{transform:scale(.88) perspective(600px) rotateY(-14deg);opacity:.55}
+  #cand{height:100%;aspect-ratio:1}
+  .thumbs{position:absolute;left:0;right:0;bottom:3.6cqw;display:flex;justify-content:center;gap:1.4cqw}
+  .thumbs canvas{width:6.2cqw;height:5cqw;border:1px solid rgba(60,240,124,.3);background:#18301e;cursor:pointer}
+  .thumbs canvas:hover{border-color:var(--g)}
+  .cyc{position:absolute;right:1.2cqw;top:16%;display:flex;flex-direction:column;gap:.8cqw}
+  .cyc button,.confirm{font-family:inherit;font-size:1.25cqw;color:var(--g);background:rgba(10,30,15,.8);border:1px solid rgba(60,240,124,.5);border-radius:3px;padding:.5cqw .9cqw;cursor:pointer;letter-spacing:.06em}
+  .cyc button:hover,.confirm:hover{background:rgba(60,240,124,.15)}
+  .confirm{position:absolute;right:1.2cqw;bottom:3.6cqw}
+  .hint{position:absolute;right:1.2cqw;bottom:1cqw;font-size:.95cqw;color:#7ff0a8;letter-spacing:.06em}
+  .lives{position:absolute;left:2.4cqw;bottom:1.4cqw;display:flex;gap:.5cqw;align-items:center;font-size:.95cqw;color:#5fbf80}
+  .lives i{width:1.1cqw;height:.9cqw;background:var(--g);display:inline-block}
+  .lives i.off{background:#3a2020;outline:1px solid #6b2a2a}
+  .banner{position:absolute;left:50%;top:9.5cqw;transform:translateX(-50%);padding:.5cqw 1.6cqw;font-size:1.3cqw;letter-spacing:.12em;border:1px solid var(--g);background:rgba(20,60,30,.92);color:#c9ffd9;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+  .banner.show{opacity:1}
+  .banner.bad{border-color:var(--red);color:#ffc2c8;background:rgba(70,15,20,.92)}
+
+  /* overlays */
+  .ov{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:1.4cqw;text-align:center;background:rgba(6,12,8,.86);z-index:5;padding:4cqw}
+  .ov.show{display:flex}
+  .ov.see{background:rgba(6,12,8,.4)}
+  .ov .t{font-size:3.6cqw;letter-spacing:.16em}
+  .ov .t.bad{color:var(--red);text-shadow:0 0 .8cqw rgba(255,77,94,.5)}
+  .ov .s{font-family:system-ui,sans-serif;font-size:max(12px,1.6cqw);color:#bfe9cc;max-width:80%}
+  .ov .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;font-family:system-ui,sans-serif}
+  button.ui{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button.ui:hover{background:#353539;border-color:#555}
+  button.ui.primary{background:#1d7a3e;border-color:#3cf07c;color:#fff}
+  button.ui.primary:hover{background:#238a48}
+
+  .row{width:var(--w);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--w);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,22,20,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;padding:4px 12px 14px}
+  .settings label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+  .settings label b{color:var(--text);font-weight:600}
+  .settings input[type=range]{width:100%;accent-color:#2fbf63}
+  .settings select{font:inherit;background:#1d1d20;color:#ddd;border:1px solid #444;border-radius:5px;padding:4px 6px}
+  .settings .check{flex-direction:row;align-items:center;gap:8px;color:#bbb}
+  .settings .check input{accent-color:#2fbf63}
+  .rules{grid-column:1/-1;color:#8a8a8a;font-size:12px;line-height:1.5;border-top:1px solid #262626;padding-top:10px}
+  .rules b{color:#cfcfcf}
+  @media (max-width:560px){.settings{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
+
+  <div class="screen" id="screen">
+    <!-- PHASE 1: terminal -->
+    <div class="view" id="term">
+      <div id="termOut" class="glow"></div>
+      <div class="prompt glow"><span>root@bobcat:~# </span><input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command"></div>
+      <div class="status" id="status"></div>
+    </div>
+    <div class="view glow" id="auth">AUTH CHANNEL ESTABLISHED</div>
+
+    <!-- PHASE 2: rings -->
+    <div class="view" id="rings">
+      <div class="rhead glow">
+        <div class="l"><b id="node">BOBCAT-SEC-NODE-29</b><small id="sess">SESSION 546EF9</small></div>
+        <div class="r"><b id="recon">RECONSTRUCTION 1 / 4</b><span class="clock" id="clock">2:00</span></div>
+      </div>
+      <div class="cols">
+        <div class="col">
+          <h3 class="glow">CAPTURED ACCESS SIGNATURE</h3>
+          <canvas id="target"></canvas>
+          <div class="hex" id="hex"></div>
+        </div>
+        <div class="col">
+          <h3 class="glow">SELECT RING FRAGMENT</h3>
+          <div class="fragno" id="fragno">FRAGMENT 01 / 05</div>
+          <div class="card" id="card"><canvas id="cand"></canvas></div>
+          <div class="cyc"><button id="up" title="Previous (W / ↑)">▲</button><button id="down" title="Next (S / ↓)">▼</button></div>
+          <div class="thumbs"><canvas id="thPrev" title="Previous fragment"></canvas><canvas id="thNext" title="Next fragment"></canvas></div>
+          <button class="confirm" id="confirm">CONFIRM ⏎</button>
+          <div class="hint">[W/S or ↑/↓] CYCLE FRAGMENT &nbsp;[ENTER] CONFIRM MATCH</div>
+        </div>
+      </div>
+      <div class="lives" id="lives"></div>
+      <div class="banner" id="banner"></div>
+    </div>
+
+    <div class="ov" id="ov">
+      <div class="t glow" id="ovT"></div>
+      <div class="s" id="ovS"></div>
+      <div class="btns" id="ovB"></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button class="ui" id="bRestart">Restart</button>
+  </div>
+
+  <details>
+    <summary>Practice settings &amp; rules</summary>
+    <div class="settings">
+      <label><span>Fragments per ring <b id="vFrags"></b></span><input id="sFrags" type="range" min="2" max="7" step="1"></label>
+      <label><span>Time for the rings <b id="vTime"></b></span><input id="sTime" type="range" min="30" max="240" step="10"></label>
+      <label><span>Wrong confirms allowed <b id="vLives"></b></span><input id="sLives" type="range" min="0" max="4" step="1"></label>
+      <label>Decoy difference
+        <select id="sDiff">
+          <option value="1">Subtle – one small change (like in-game)</option>
+          <option value="2">Clearer – two changes</option>
+          <option value="3">Easy – three bigger changes</option>
+        </select>
+      </label>
+      <label class="check"><input id="sSkip" type="checkbox"> Skip the terminal step (rings only)</label>
+      <div class="rules">
+        <b>Step 1 – terminal:</b> type each <b>[TASK]</b> line exactly and press Enter (3 attempts; type <b>help</b> to see the tasks again).<br>
+        <b>Step 2 – rings:</b> rebuild the captured signature from the <b>inside out</b>. For each of the 4 rings, cycle the fragments with
+        <b>W/S</b> or <b>↑/↓</b> (or the ▲▼ buttons / thumbnails) and press <b>Enter</b> when the fragment matches that ring on the left.
+        Decoys differ by a small detail — an arc gap, a tick, a yellow square or a marker. Compare one feature at a time.
+        R = restart (outside the terminal).
+      </div>
+    </div>
+  </details>
+</main>
+
+<script>
+(() => {
+  const DEFAULTS = {frags:5, time:120, lives:2, diff:1, skip:false};
+  const RADII = [44, 62, 80, 98], HALF = 128;
+  const COMMANDS = ['export KEYPAD','ls /mnt','cd /mnt/backup_drive','export CIPHER','mount /dev/usb0','unset TRACE','ls -la /mnt/backup_drive',
+    'export NODE=29','sync --force','cat auth.key','chmod 600 auth.key','export BYPASS=1','ls /mnt/backup_drive','umount /dev/usb0'];
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let cfg = Object.assign({}, DEFAULTS, store.get('usb.cfg', {}));
+  let stats = store.get('usb.stats', {});
+  const $ = id => document.getElementById(id);
+
+  // ---------- random helpers ----------
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const ri = (a, b) => Math.floor(rnd(a, b + 1));
+  const pick = arr => arr[Math.random() * arr.length | 0];
+  const na = a => ((a % 360) + 360) % 360;
+  const adiff = (a, b) => { const d = Math.abs(na(a) - na(b)); return Math.min(d, 360 - d); };
+  const clone = o => JSON.parse(JSON.stringify(o));
+
+  function spacedAngles(n, minGap, avoid = []){
+    for (let tries = 0; tries < 200; tries++){
+      const out = [];
+      for (let i = 0; i < n; i++){
+        let a, ok = false;
+        for (let t = 0; t < 60 && !ok; t++){ a = rnd(0, 360); ok = [...out, ...avoid].every(b => adiff(a, b) >= minGap); }
+        if (!ok) break; out.push(a);
+      }
+      if (out.length === n) return out;
+    }
+    return Array.from({length:n}, (_, i) => i * 360 / n + rnd(0, 20));
+  }
+
+  // ---------- ring model ----------
+  function makeRing(k){
+    const g = ri(2, 3);
+    const base = rnd(0, 360);
+    const gaps = [];
+    for (let i = 0; i < g; i++){
+      const c = base + i * 360 / g + rnd(-28, 28), w = rnd(24, 58);
+      gaps.push([c - w/2, c + w/2]);
+    }
+    const arcs = gaps.map((gp, i) => { const nx = gaps[(i + 1) % g]; return [gp[1], nx[0] + (i + 1 === g ? 360 : 0)]; });
+    const tickA = spacedAngles(ri(5, 7), 18);
+    const ticks = tickA.map(a => {
+      const mode = Math.random();
+      const long = Math.random() < 0.22;
+      return {a, in: mode < 0.3 ? rnd(5, 10) : 0, out: mode > 0.15 ? rnd(6, 13) * (long ? 2.2 : 1) : 0};
+    }).map(t => (t.in || t.out) ? t : {...t, out: 9});
+    const sqA = spacedAngles(ri(1, 3), 40);
+    const squares = sqA.map(a => ({a, d: rnd(11, 17)}));
+    const blocks = spacedAngles(ri(0, 2), 30, tickA);
+    const diamond = Math.random() < 0.65 ? rnd(0, 360) : null;
+    const notch = Math.random() < 0.5 ? rnd(0, 360) : null;
+    return {k, r: RADII[k], arcs, ticks, squares, blocks, diamond, notch, dashed: k >= 2 && Math.random() < 0.55};
+  }
+
+  // one mutation = one visible difference
+  function mutate(ring, strength){
+    const m = clone(ring);
+    const big = strength >= 3 ? 1.6 : 1;
+    const ops = ['gap','gap','tick','tick','square','square','marker'];
+    const op = pick(ops);
+    if (op === 'gap'){
+      const i = ri(0, m.arcs.length - 1), end = Math.random() < .5 ? 0 : 1;
+      const delta = (Math.random() < .5 ? -1 : 1) * rnd(20, 34) * big;
+      const arc = m.arcs[i].slice(); arc[end] += delta;
+      const len = arc[1] - arc[0];
+      const prev = m.arcs[(i - 1 + m.arcs.length) % m.arcs.length], next = m.arcs[(i + 1) % m.arcs.length];
+      const gapBefore = na(arc[0] - prev[1]), gapAfter = na(next[0] - arc[1]);
+      if (len < 30 || gapBefore < 8 || gapAfter < 8 || gapBefore > 200 || gapAfter > 200) return mutate(ring, strength);
+      m.arcs[i] = arc;
+    } else if (op === 'tick'){
+      const t = pick(m.ticks), how = Math.random();
+      if (how < 0.55){
+        const old = t.a; t.a = na(t.a + (Math.random() < .5 ? -1 : 1) * rnd(22, 40) * big);
+        if (m.ticks.some(o => o !== t && adiff(o.a, t.a) < 10)){ t.a = old; return mutate(ring, strength); }
+      } else if (how < 0.8){ if (t.out){ t.in = t.in || rnd(6, 10); t.out = 0; } else { t.out = rnd(8, 13); t.in = 0; } }
+      else { if (t.out) t.out = t.out > 18 ? rnd(6, 10) : t.out * 2.3; else return mutate(ring, strength); }
+    } else if (op === 'square'){
+      const how = Math.random();
+      if (how < 0.5 || m.squares.length === 1 && how < 0.75){
+        const s = pick(m.squares); const old = s.a; s.a = na(s.a + (Math.random() < .5 ? -1 : 1) * rnd(30, 60) * big);
+        if (m.squares.some(o => o !== s && adiff(o.a, s.a) < 28)){ s.a = old; return mutate(ring, strength); }
+      } else if (how < 0.75){ m.squares.splice(ri(0, m.squares.length - 1), 1); }
+      else {
+        const a = spacedAngles(1, 40, m.squares.map(s => s.a))[0];
+        m.squares.push({a, d: rnd(11, 17)});
+      }
+    } else {
+      const which = pick(['diamond','notch','block']);
+      if (which === 'block'){
+        if (m.blocks.length && Math.random() < .6){ const i = ri(0, m.blocks.length - 1); m.blocks[i] = na(m.blocks[i] + rnd(35, 80) * (Math.random() < .5 ? -1 : 1)); }
+        else if (m.blocks.length && Math.random() < .5) m.blocks.pop(); else m.blocks.push(rnd(0, 360));
+      } else {
+        if (m[which] == null) m[which] = rnd(0, 360);
+        else if (Math.random() < .35) m[which] = null;
+        else m[which] = na(m[which] + rnd(40, 100) * (Math.random() < .5 ? -1 : 1));
+      }
+    }
+    return m;
+  }
+
+  const sig = r => JSON.stringify([r.arcs.map(a => a.map(x => Math.round(na(x) / 4))), r.ticks.map(t => [Math.round(na(t.a)/4), !!t.in, t.out > 18 ? 2 : t.out ? 1 : 0]).sort(),
+    r.squares.map(s => Math.round(na(s.a)/6)).sort(), r.blocks.map(b => Math.round(na(b)/6)).sort(), r.diamond == null ? -1 : Math.round(na(r.diamond)/6), r.notch == null ? -1 : Math.round(na(r.notch)/6)]);
+
+  function makeOptions(ring){
+    const opts = [ring], seen = new Set([sig(ring)]);
+    let guard = 0;
+    while (opts.length < cfg.frags && guard++ < 500){
+      let d = ring;
+      for (let i = 0; i < cfg.diff; i++) d = mutate(d, cfg.diff);
+      const s = sig(d);
+      if (!seen.has(s)){ seen.add(s); opts.push(d); }
+    }
+    // shuffle
+    for (let i = opts.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [opts[i], opts[j]] = [opts[j], opts[i]]; }
+    return {opts, correct: opts.indexOf(ring)};
+  }
+
+  // ---------- drawing ----------
+  const rad = a => a * Math.PI / 180;
+  function setupCanvas(c, half = HALF){
+    const r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    c.width = Math.max(1, Math.round(r.width * dpr)); c.height = Math.max(1, Math.round(r.height * dpr));
+    const ctx = c.getContext('2d');
+    const s = Math.min(c.width, c.height) / (2 * half);
+    ctx.setTransform(s, 0, 0, s, c.width / 2, c.height / 2);
+    return ctx;
+  }
+
+  function drawRing(ctx, ring, theme){
+    const T = theme === 'target'
+      ? {base:'rgba(150,180,60,.55)', arc:'#46f585', arcGlow:'rgba(60,240,124,.75)', tick:'#a9f3c4', block:'#f2f7f2', diamond:'#46f585', notch:'#0f1a12', sq:'#d9e46a'}
+      : {base:'#93a33c', arc:'#eef7ef', arcGlow:'rgba(230,255,235,.55)', tick:'#cdf7da', block:'#ffffff', diamond:'#eef7ef', notch:'#13241a', sq:'#dbe56b'};
+    const r = ring.r;
+    ctx.lineCap = 'butt';
+    // thin base
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.strokeStyle = T.base; ctx.lineWidth = 0.9; ctx.stroke();
+    // thick arcs
+    ctx.save();
+    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 6 : 4;
+    ctx.strokeStyle = T.arc; ctx.lineWidth = 3.6;
+    if (ring.dashed && theme === 'target') ctx.setLineDash([7, 4]);
+    else if (ring.dashed) ctx.setLineDash([7, 4]);
+    for (const [s, e] of ring.arcs){ ctx.beginPath(); ctx.arc(0, 0, r, rad(s), rad(e)); ctx.stroke(); }
+    ctx.restore();
+    // ticks
+    ctx.strokeStyle = T.tick; ctx.lineWidth = 0.9;
+    for (const t of ring.ticks){
+      const c = Math.cos(rad(t.a)), s = Math.sin(rad(t.a));
+      ctx.beginPath();
+      ctx.moveTo(c * (r - (t.in || 0)), s * (r - (t.in || 0)));
+      ctx.lineTo(c * (r + (t.out || 0)), s * (r + (t.out || 0)));
+      ctx.stroke();
+    }
+    // blocks (white rectangles on the ring)
+    for (const b of ring.blocks){
+      ctx.save(); ctx.rotate(rad(b)); ctx.fillStyle = T.block; ctx.fillRect(r - 2.6, -2.4, 5.2, 4.8); ctx.restore();
+    }
+    // diamond
+    if (ring.diamond != null){
+      ctx.save(); ctx.rotate(rad(ring.diamond)); ctx.translate(r, 0); ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = T.diamond; ctx.fillRect(-3, -3, 6, 6); ctx.restore();
+    }
+    // notch (dark block)
+    if (ring.notch != null){
+      ctx.save(); ctx.rotate(rad(ring.notch)); ctx.fillStyle = T.notch; ctx.strokeStyle = theme === 'target' ? '#46f585' : '#cdf7da';
+      ctx.lineWidth = .6; ctx.fillRect(r - 4, -1.8, 8, 3.6); ctx.strokeRect(r - 4, -1.8, 8, 3.6); ctx.restore();
+    }
+    // yellow squares
+    for (const q of ring.squares){
+      const d = r + q.d;
+      ctx.save(); ctx.translate(Math.cos(rad(q.a)) * d, Math.sin(rad(q.a)) * d);
+      ctx.shadowColor = 'rgba(217,228,106,.6)'; ctx.shadowBlur = 3;
+      ctx.fillStyle = T.sq; ctx.fillRect(-2.7, -2.2, 5.4, 4.4); ctx.restore();
+    }
+  }
+
+  function drawTarget(){
+    const c = $('target'); const ctx = setupCanvas(c);
+    ctx.clearRect(-HALF*2, -HALF*2, HALF*4, HALF*4);
+    // core
+    ctx.save(); ctx.shadowColor = 'rgba(60,240,124,.7)'; ctx.shadowBlur = 5;
+    ctx.strokeStyle = '#46f585'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 4; i++){ const a = i * Math.PI / 2; ctx.beginPath(); ctx.arc(Math.cos(a) * 22, Math.sin(a) * 22, 3.2, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(0, 0, 31, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(150,180,60,.45)'; ctx.lineWidth = .8; ctx.stroke();
+    ctx.restore();
+    for (const r of game.rings) drawRing(ctx, r, 'target');
+  }
+
+  function drawCandidate(canvas, ring, small){
+    // zoom so the current ring fills the card like in-game (inner rings get magnified)
+    const ctx = setupCanvas(canvas, Math.max(ring.r + 30, 76));
+    ctx.clearRect(-HALF*2, -HALF*2, HALF*4, HALF*4);
+    if (!small){
+      ctx.setLineDash([2, 3]); ctx.strokeStyle = 'rgba(80,220,120,.35)'; ctx.lineWidth = .7;
+      for (const rr of RADII){ ctx.beginPath(); ctx.arc(0, 0, rr, 0, Math.PI * 2); ctx.stroke(); }
+      ctx.setLineDash([]);
+    }
+    ctx.strokeStyle = '#59e08a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+    drawRing(ctx, ring, 'cand');
+  }
+
+  // ---------- game state ----------
+  const game = {phase:'idle', rings:[], options:[], ring:0, idx:0, lives:0, start:0, ringStart:0, end:0, tasks:[], task:0, attempts:3, bannerT:null};
+
+  function show(view){ for (const v of ['term','auth','rings']) $(v).classList.toggle('show', v === view); }
+  function hideOv(){ $('ov').classList.remove('show'); }
+  function showOv(title, sub, btns, bad, see){
+    $('ovT').textContent = title; $('ovT').className = 't glow' + (bad ? ' bad' : '');
+    $('ovS').innerHTML = sub || '';
+    const b = $('ovB'); b.innerHTML = '';
+    for (const [label, fn, primary] of btns){
+      const e = document.createElement('button'); e.className = 'ui' + (primary ? ' primary' : ''); e.textContent = label; e.onclick = fn; b.appendChild(e);
+    }
+    $('ov').classList.toggle('see', !!see);
+    $('ov').classList.add('show');
+  }
+
+  function newGame(){
+    hideOv();
+    game.rings = RADII.map((_, k) => makeRing(k));
+    game.options = game.rings.map(r => makeOptions(r));
+    game.ring = 0; game.idx = 0; game.lives = cfg.lives; game.end = 0;
+    game.start = performance.now();
+    $('node').textContent = 'BOBCAT-SEC-NODE-' + ri(10, 99);
+    $('sess').textContent = 'SESSION ' + Math.random().toString(16).slice(2, 8).toUpperCase();
+    $('hex').textContent = Array.from({length:6}, () => '0x' + Math.random().toString(16).slice(2, 6).toUpperCase()).join(' ');
+    if (cfg.skip) startRings(); else startTerminal();
+  }
+
+  // ---------- terminal ----------
+  function tline(text, cls){
+    const d = document.createElement('div'); if (cls) d.className = cls; d.textContent = text; $('termOut').appendChild(d);
+    const out = $('termOut'); while (out.scrollHeight > out.clientHeight && out.children.length > 8) out.removeChild(out.children[7]);
+  }
+  function startTerminal(){
+    game.phase = 'term';
+    const pool = COMMANDS.slice(); game.tasks = [];
+    game.tasks.push(pool.splice(pool.indexOf(pick(pool.slice(0, 4))), 1)[0]);
+    game.tasks.push(pick(pool));
+    game.task = 0; game.attempts = 3;
+    $('termOut').innerHTML = '';
+    tline('DRIVE MOUNTED: /mnt/backup_drive');
+    tline('SESSION: privileged shell');
+    tline('Type the listed commands exactly, then press Enter.');
+    tline(' ');
+    game.tasks.forEach((t, i) => tline(` [TASK ${i+1}] ${t}`));
+    tline(' ');
+    updateStatus();
+    show('term');
+    $('cmd').value = ''; setTimeout(() => $('cmd').focus(), 30);
+  }
+  function updateStatus(){ $('status').textContent = `PHASE 1 / CLI attempts=${game.attempts}`; }
+
+  $('cmd').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || game.phase !== 'term') return;
+    e.preventDefault();
+    const raw = $('cmd').value; const cmd = raw.trim(); $('cmd').value = '';
+    tline(`  root@bobcat:~# ${raw}`);
+    if (!cmd) return;
+    if (cmd === 'help'){ game.tasks.forEach((t, i) => tline(`  [TASK ${i+1}] ${t}${i < game.task ? '   (done)' : ''}`, 'dim')); return; }
+    if (cmd === 'clear'){ startTerminalKeep(); return; }
+    if (cmd === game.tasks[game.task]){
+      tline('  OK', 'ok'); game.task++;
+      if (game.task >= game.tasks.length){
+        game.phase = 'auth'; $('cmd').blur();
+        setTimeout(() => { show('auth'); setTimeout(startRings, 1400); }, 450);
+      }
+    } else {
+      game.attempts--; updateStatus();
+      if (game.attempts <= 0){
+        tline('  FAIL — no attempts left. Session terminated.', 'err');
+        failRun('Too many wrong commands.');
+      } else {
+        tline(`  FAIL — attempts left: ${game.attempts}`, 'err');
+        tline('  tip: type help — or the [TASK] lines exactly', 'dim');
+      }
+    }
+  });
+  function startTerminalKeep(){
+    $('termOut').innerHTML = '';
+    tline('DRIVE MOUNTED: /mnt/backup_drive'); tline('SESSION: privileged shell'); tline('Type the listed commands exactly, then press Enter.'); tline(' ');
+    game.tasks.forEach((t, i) => tline(` [TASK ${i+1}] ${t}`)); tline(' ');
+  }
+  $('term').addEventListener('pointerdown', () => setTimeout(() => $('cmd').focus(), 0));
+
+  // ---------- rings ----------
+  function startRings(){
+    game.phase = 'rings'; game.ring = 0; game.idx = 0; game.ringStart = performance.now();
+    show('rings');
+    renderLives();
+    requestAnimationFrame(() => { drawTarget(); renderRing(); });
+    banner('MATCH SIGNATURE PATTERN — NO LABELS');
+  }
+  function renderLives(){
+    const el = $('lives'); el.innerHTML = '';
+    for (let i = 0; i <= cfg.lives; i++){ const s = document.createElement('i'); if (i > game.lives) s.className = 'off'; el.appendChild(s); }
+    const t = document.createElement('span'); t.textContent = ' reconstruction channel open'; el.appendChild(t);
+  }
+  function renderRing(anim){
+    const o = game.options[game.ring], n = o.opts.length;
+    $('recon').textContent = `RECONSTRUCTION ${game.ring + 1} / ${RADII.length}`;
+    $('fragno').textContent = `FRAGMENT ${String(game.idx + 1).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
+    const draw = () => {
+      drawCandidate($('cand'), o.opts[game.idx]);
+      drawCandidate($('thPrev'), o.opts[(game.idx - 1 + n) % n], true);
+      drawCandidate($('thNext'), o.opts[(game.idx + 1) % n], true);
+    };
+    if (anim){ $('card').classList.add('flip'); setTimeout(() => { draw(); $('card').classList.remove('flip'); }, 90); }
+    else draw();
+  }
+  function cycle(d){
+    if (game.phase !== 'rings') return;
+    const n = game.options[game.ring].opts.length;
+    game.idx = (game.idx + d + n) % n; renderRing(true);
+  }
+  function confirm(){
+    if (game.phase !== 'rings') return;
+    const o = game.options[game.ring];
+    if (game.idx === o.correct){
+      banner(`RING ${game.ring + 1} MATCHED`);
+      game.ring++; game.idx = 0;
+      if (game.ring >= RADII.length) return winRun();
+      renderRing(true);
+    } else {
+      game.lives--; renderLives();
+      banner('SIGNATURE MISMATCH', true);
+      if (game.lives < 0) failRun(`Wrong fragment on ring ${game.ring + 1}. The correct one was fragment ${String(o.correct + 1).padStart(2, '0')} — it's shown now.`, true);
+    }
+  }
+  function banner(text, bad){
+    const b = $('banner'); b.textContent = text; b.className = 'banner show' + (bad ? ' bad' : '');
+    clearTimeout(game.bannerT); game.bannerT = setTimeout(() => b.classList.remove('show'), 1100);
+  }
+
+  function winRun(){
+    game.phase = 'done'; game.end = (performance.now() - game.start) / 1000;
+    const ringTime = (performance.now() - game.ringStart) / 1000;
+    const pb = record(true, game.end);
+    setTimeout(() => showOv('ACCESS GRANTED', `Total ${game.end.toFixed(1)}s (rings ${ringTime.toFixed(1)}s)${pb ? ' · new best!' : ''}`, [['Again', newGame, true]]), 500);
+  }
+  function failRun(why, revealCorrect){
+    const wasRings = game.phase === 'rings';
+    game.phase = 'done';
+    record(false);
+    if (wasRings && revealCorrect){ game.idx = game.options[game.ring].correct; renderRing(); }
+    setTimeout(() => showOv('ACCESS DENIED', why, wasRings
+      ? [['Look at the board', hideOv], ['Try again', newGame, true]]
+      : [['Try again', newGame, true]], true, wasRings), 450);
+  }
+
+  function record(won, t){
+    const key = statKey();
+    const s = stats[key] || (stats[key] = {runs:0, wins:0, best:null});
+    s.runs++;
+    let pb = false;
+    if (won){ s.wins++; if (s.best == null || t < s.best){ s.best = t; pb = true; } }
+    store.set('usb.stats', stats); renderStats();
+    return pb;
+  }
+  const statKey = () => `${cfg.frags}f-${cfg.time}t-${cfg.lives}l-${cfg.diff}d-${cfg.skip ? 'rings' : 'full'}`;
+  function renderStats(){
+    const s = stats[statKey()];
+    $('stats').innerHTML = s && s.runs
+      ? `These settings: best <b>${s.best != null ? s.best.toFixed(1)+'s' : '—'}</b> · cleared <b>${s.wins}/${s.runs}</b>`
+      : 'These settings: no runs yet';
+  }
+
+  // ---------- clock ----------
+  function tick(){
+    if (game.phase === 'rings'){
+      const left = Math.max(0, cfg.time - (performance.now() - game.ringStart) / 1000);
+      const m = Math.floor(left / 60), s = Math.floor(left % 60);
+      $('clock').textContent = `${m}:${String(s).padStart(2, '0')}`;
+      $('clock').classList.toggle('low', left < 15);
+      if (left <= 0) failRun("Time's up.", true);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ---------- input ----------
+  $('up').onclick = () => cycle(-1);
+  $('down').onclick = () => cycle(1);
+  $('thPrev').onclick = () => cycle(-1);
+  $('thNext').onclick = () => cycle(1);
+  $('confirm').onclick = confirm;
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (game.phase === 'rings'){
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp'){ e.preventDefault(); cycle(-1); }
+      else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown'){ e.preventDefault(); cycle(1); }
+      else if (e.key === 'Enter'){ e.preventDefault(); confirm(); }
+    }
+    if ((e.key === 'r' || e.key === 'R') && game.phase !== 'term') newGame();
+    else if (e.key === 'Enter' && game.phase === 'idle') newGame();
+  });
+  $('bRestart').onclick = e => { e.currentTarget.blur(); newGame(); };
+
+  // ---------- settings ----------
+  const fields = [
+    ['sFrags','vFrags','frags', v => v],
+    ['sTime','vTime','time', v => `${Math.floor(v/60)}:${String(v%60).padStart(2,'0')}`],
+    ['sLives','vLives','lives', v => v],
+  ];
+  function syncUI(){
+    for (const [s, v, k, f] of fields){ $(s).value = cfg[k]; $(v).textContent = f(+cfg[k]); }
+    $('sDiff').value = String(cfg.diff); $('sSkip').checked = cfg.skip;
+  }
+  function changed(){ store.set('usb.cfg', cfg); syncUI(); toIdle(); }
+  for (const [s, v, k, f] of fields){
+    $(s).oninput = () => { $(v).textContent = f(+$(s).value); };
+    $(s).onchange = () => { cfg[k] = +$(s).value; changed(); };
+  }
+  $('sDiff').onchange = () => { cfg.diff = +$('sDiff').value; changed(); };
+  $('sSkip').onchange = () => { cfg.skip = $('sSkip').checked; changed(); };
+
+  function toIdle(){
+    game.phase = 'idle'; show(null);
+    showOv('BOBCAT USB DRIVE', `Step 1: type the commands on the terminal. Step 2: match ${RADII.length} rings to the captured signature, inner to outer.`, [['Start (Enter)', newGame, true]]);
+    renderStats();
+  }
+
+  function resize(){
+    const w = Math.max(320, Math.min(1100, window.innerWidth - 32, (window.innerHeight - 130) * 4 / 3));
+    document.documentElement.style.setProperty('--w', Math.floor(w) + 'px');
+    if (game.phase === 'rings' || (game.phase === 'done' && game.rings.length)){
+      requestAnimationFrame(() => { drawTarget(); renderRing(); });
+    }
+  }
+  window.addEventListener('resize', resize);
+  resize(); syncUI(); toIdle(); requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
