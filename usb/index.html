@@ -719,6 +719,32 @@
     el.addEventListener('pointerdown', e => { e.stopPropagation(); close(); });
   }
 
+  // ---------- shortcut: typing the word below (outside the terminal) plays the ending ----------
+  const CHEAT = 'mrmoss';
+  let cheatBuf = '', cheatTimer = null;
+  function cheatFlush(){
+    if (cheatBuf === 'm') SFX.setMuted(!SFX.muted);   // a lone M keeps working as the mute key
+    cheatBuf = ''; clearTimeout(cheatTimer);
+  }
+  window.addEventListener('keydown', e => {
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    if (document.querySelector('.hx')) return;
+    const k = (e.key || '').toLowerCase();
+    if (k.length !== 1) return;
+    if (cheatBuf && !CHEAT.startsWith(cheatBuf + k)) cheatFlush();
+    if (!CHEAT.startsWith(cheatBuf + k)) return;          // not part of the code: let the key do its normal job
+    e.stopImmediatePropagation(); e.preventDefault();
+    cheatBuf += k; clearTimeout(cheatTimer);
+    if (cheatBuf === CHEAT){
+      cheatBuf = '';
+      hideOv(); game.phase = 'done';
+      secretEnding(toIdle);
+      return;
+    }
+    cheatTimer = setTimeout(cheatFlush, 1000);
+  }, true);
+
   // ---------- clock ----------
   function tick(){
     if (game.phase === 'rings'){
