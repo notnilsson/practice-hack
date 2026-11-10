@@ -1,4 +1,4 @@
-/* Blinking-eye favicon: swaps the tab icon through a few eyelid frames every few seconds.
+/* Blinking-eye favicon (and home-page header logo): swaps the tab icon through a few eyelid frames every few seconds.
    Browsers only show still SVG favicons, so the animation is done by changing the icon from script.
    Safari ignores favicon changes and simply shows the open eye. */
 (function(){
@@ -22,9 +22,10 @@ ${o < 0.15 ? '<path d="M7 32 Q32 41 57 32" fill="none" stroke="#ffb000" stroke-w
   const link = document.createElement('link');
   link.rel = 'icon'; link.type = 'image/svg+xml'; link.href = FRAMES[0];
   document.head.appendChild(link);
+  const logos = document.querySelectorAll('img.logo');      // the header logo on the home page blinks in step
   function blink(){
     let i = 0;
-    const step = () => { link.href = FRAMES[i++]; if (i < FRAMES.length) setTimeout(step, 45); };
+    const step = () => { logos.forEach(img => img.src = FRAMES[i]); link.href = FRAMES[i++]; if (i < FRAMES.length) setTimeout(step, 45); };
     step();
     const twice = Math.random() < 0.2;                       // now and then a quick double blink
     setTimeout(blink, twice ? 450 : 2500 + Math.random() * 3500);
