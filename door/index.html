@@ -113,7 +113,7 @@
   const held = new Set(), pops = [];
   const now = () => performance.now() / 1000;
   const rnd = (a, b) => a + Math.random() * (b - a);
-  const SPEED = (L - TOP - KS) / FALL;
+  const SPEED = (L - TOP - KS) / FALL;   // same fall speed as the clip; keys now enter from above, so you see them for longer
 
   // sizes of the drops in one phase: pairs, with a few single keys, adding up to 10
   function makePlan(){
@@ -130,7 +130,7 @@
       for (let t = 0; t < 50 && !ok; t++){ x = rnd(24, L - 24 - KS); ok = keys.every(k => Math.abs(k.x - x) > KS * 2.2); }
       keys.push({ch, x, down: false});
     }
-    wave = {keys, y: TOP, born: now()};
+    wave = {keys, y: -KS, born: now()};   /* start just above the panel so keys slide in from the top edge */
   }
 
   // ---------- drawing ----------
