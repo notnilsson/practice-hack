@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0e1014">
+<title>Connect the Dots – Vangelico Practice</title>
+<style>
+  :root{--size:568px;--text:#dcdcdc;--muted:#8b8b8b;--red:#f0333d;--pink:#ff7f7f;--green:#3fd27a}
+  *{box-sizing:border-box}
+  html{background:#08090b}
+  html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:radial-gradient(ellipse at 50% 30%,#1f1c1c 0%,#0e0d0d 65%,#080707 100%) fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .topbar{width:var(--size);display:flex}
+  .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
+    background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
+  .back svg{width:16px;height:16px;transition:transform .15s}
+  .back:hover{background:rgba(240,51,61,.12);border-color:var(--red);color:#fff}
+  .back:hover svg{transform:translateX(-2px)}
+  .back:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  .hud{width:var(--size);display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .hud b{color:var(--text);font-weight:600}
+  .board{position:relative;width:var(--size);height:var(--size);user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;border:1px solid #3d3d40;border-top-color:#6a6a6d;border-radius:3px;cursor:crosshair;touch-action:none}
+  canvas.over{cursor:pointer}
+  .bars{width:var(--size);display:flex;gap:5px}
+  .bars div{flex:1;height:9px;background:#5d5b5d;border-radius:5px;overflow:hidden;position:relative}
+  .bars i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--red);border-radius:5px;transition:width .22s ease-out}
+  .bars div.lost i{background:var(--pink);width:100% !important}
+  .bars div.done i{width:100% !important}
+
+  .overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  .overlay.show{display:flex}
+  .box{border:1px solid #2a2a2c;border-radius:8px;background:rgba(10,10,11,.92);padding:16px 26px;font-size:17px;font-weight:600;color:#f3f3f3;font-family:"Segoe UI",system-ui,sans-serif}
+  .box.lost{border-color:#e8645e;color:#ff8a80}
+  .box.win{border-color:#2b7a4b;color:var(--green)}
+  .box.intro{border-color:#7a2a2e;color:#ffb0b0}
+  .sub{color:#b5b5b5;font-size:13px;font-variant-numeric:tabular-nums;max-width:90%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#9c1f27;border-color:#e0333d;color:#fff}
+  button.primary:hover{background:#b3232c}
+
+  .row{width:var(--size);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--size);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,18,18,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .rules{color:#8a8a8a;font-size:12px;line-height:1.5;padding:2px 12px 14px}
+  .rules b{color:#cfcfcf}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
+  <div class="hud">
+    <span>Phase <b id="hPhase">1/2</b> · Dots <b id="hDots">1/10</b></span>
+    <span>Time left <b id="hTime">11.0s</b></span>
+  </div>
+
+  <div class="board">
+    <canvas id="cv"></canvas>
+    <div class="overlay" id="overlay">
+      <div class="box" id="oBox"></div>
+      <div class="sub" id="oSub"></div>
+      <div class="btns" id="oBtns"></div>
+    </div>
+  </div>
+
+  <div class="bars" id="bars"><div><i></i></div><div><i></i></div></div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>How to play</summary>
+    <div class="rules">
+      You start on a random dot (already lit). Click the dot that is <b>closest to the last dot you connected</b>,
+      then the closest to that one, and so on until every dot is connected. Only dots you haven't connected yet count.
+      <b>One wrong click fails the hack.</b> There are <b>2 phases</b> of 10 dots, each with its own timer (the red bar, about 11 seconds).
+      Keys: R = restart, Enter = start.
+    </div>
+  </details>
+</main>
+
+<script src="../sfx.js"></script>
+<script>
+(() => {
+  // In-game values measured from the clip: 10 dots, 2 phases, timer bar ticks 12 times ~0.92s apart per phase.
+  const L = 568, N = 10, PHASES = 2, TICKS = 12, TICK = 0.92, PHASE_TIME = TICKS * TICK;
+  const DOT_R = 9.5, HIT_R = 22, MARGIN = 48, MIN_GAP = 52, TIE = 1.15;
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let stats = store.get('dots.stats', {runs:0, wins:0, best:null});
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const bgC = document.createElement('canvas'), bgX = bgC.getContext('2d');
+  let px = 1;
+
+  let state = 'idle';            // idle | running | between | won | lost
+  let phase = 0, dots = [], order = [], done = 0, phaseStart = 0, runStart = 0, endTime = 0;
+  let pointer = null, hover = -1, wrongDot = -1, wrongAt = 0, popAt = [];
+
+  const now = () => performance.now() / 1000;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+  // Random dots + random start, rejected until every step has one clearly-closest dot (no near ties).
+  function makeBoard(){
+    for (let tries = 0; tries < 5000; tries++){
+      const pts = [];
+      let guard = 0;
+      while (pts.length < N && guard++ < 2000){
+        const p = {x: rnd(MARGIN, L - MARGIN), y: rnd(MARGIN, L - MARGIN)};
+        if (pts.every(q => dist(p, q) >= MIN_GAP)) pts.push(p);
+      }
+      if (pts.length < N) continue;
+      const start = Math.random() * N | 0, path = [start], left = new Set(pts.keys()); left.delete(start);
+      let ok = true;
+      while (left.size){
+        const cur = pts[path[path.length - 1]];
+        const ds = [...left].map(i => [dist(cur, pts[i]), i]).sort((a, b) => a[0] - b[0]);
+        if (ds.length > 1 && ds[1][0] < ds[0][0] * TIE){ ok = false; break; }
+        path.push(ds[0][1]); left.delete(ds[0][1]);
+      }
+      if (ok) return {pts, path};
+    }
+    return null;
+  }
+
+  // ---------- drawing ----------
+  function resize(){
+    const s = Math.floor(Math.max(260, Math.min(780, window.innerWidth - 32, window.innerHeight - 200)));
+    document.documentElement.style.setProperty('--size', s + 'px');
+    const dpr = window.devicePixelRatio || 1;
+    px = s / L * dpr;
+    for (const c of [cv, bgC]){ c.width = Math.round(s * dpr); c.height = Math.round(s * dpr); }
+    bgX.setTransform(1, 0, 0, 1, 0, 0);
+    const g = bgX.createLinearGradient(0, 0, 0, bgC.height);
+    g.addColorStop(0, '#18181a'); g.addColorStop(1, '#121214');
+    bgX.fillStyle = g; bgX.fillRect(0, 0, bgC.width, bgC.height);
+    bgX.setTransform(px, 0, 0, px, 0, 0);
+    bgX.fillStyle = 'rgba(255,255,255,0.028)';
+    for (let y = 0; y < L; y += 3) for (let x = (y / 3) % 2 ? 1.5 : 0; x < L; x += 3) bgX.fillRect(x, y, 1, 1);
+  }
+
+  function draw(){
+    const t = now();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(bgC, 0, 0);
+    ctx.setTransform(px, 0, 0, px, 0, 0);
+    if (!dots.length) return;
+    const visited = order.slice(0, done);
+
+    // connections
+    ctx.save();
+    ctx.strokeStyle = '#ec3039'; ctx.lineWidth = 2.4; ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(240,40,50,.55)'; ctx.shadowBlur = 6;
+    ctx.beginPath();
+    visited.forEach((i, k) => { const p = dots[i]; k ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); });
+    ctx.stroke(); ctx.restore();
+
+    // dashed line from the last dot to the cursor
+    if (state === 'running' && pointer && done > 0){
+      const last = dots[order[done - 1]];
+      ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(236,48,57,.6)'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(pointer.x, pointer.y); ctx.stroke(); ctx.restore();
+    }
+
+    // dots
+    dots.forEach((p, i) => {
+      const on = visited.includes(i);
+      const pop = popAt[i] ? Math.max(0, 1 - (t - popAt[i]) / 0.25) : 0;
+      if (on){
+        ctx.save(); ctx.shadowColor = 'rgba(255,50,60,.8)'; ctx.shadowBlur = 10;
+        ctx.fillStyle = '#f0333d'; ctx.beginPath(); ctx.arc(p.x, p.y, DOT_R + 1 + pop * 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      } else {
+        const hot = i === hover && state === 'running';
+        ctx.fillStyle = hot ? 'rgba(200,30,42,.38)' : 'rgba(130,18,26,.32)';
+        ctx.beginPath(); ctx.arc(p.x, p.y, DOT_R, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = hot ? 'rgba(255,80,90,.95)' : 'rgba(215,40,50,.62)'; ctx.lineWidth = 1.6; ctx.stroke();
+      }
+      if (i === wrongDot && t - wrongAt < 0.6){
+        ctx.strokeStyle = `rgba(255,140,130,${1 - (t - wrongAt) / 0.6})`; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(p.x, p.y, DOT_R + 5 + (t - wrongAt) * 14, 0, Math.PI * 2); ctx.stroke();
+      }
+    });
+
+    if (state !== 'running'){ ctx.fillStyle = 'rgba(0,0,0,.78)'; ctx.fillRect(0, 0, L, L); }
+  }
+
+  // ---------- flow ----------
+  function newPhase(){
+    const b = makeBoard();
+    dots = b.pts; order = b.path; done = 1; popAt = []; popAt[order[0]] = now(); wrongDot = -1;
+    phaseStart = now();
+    paintBars();
+  }
+  function start(){
+    hideOverlay();
+    phase = 0; endTime = 0; runStart = now();
+    bars.forEach(b => { b.className = ''; b.querySelector('i').style.width = '0%'; });
+    newPhase();
+    state = 'running';
+    SFX.resetCountdown(); SFX.play('start');
+  }
+
+  function hitDot(p){
+    let best = -1, bd = HIT_R;
+    dots.forEach((d, i) => { const r = dist(p, d); if (r < bd){ bd = r; best = i; } });
+    return best;
+  }
+
+  function click(p){
+    if (state !== 'running') return;
+    const i = hitDot(p);
+    if (i < 0 || order.slice(0, done).includes(i)) return;   // empty space or an already-connected dot: nothing happens
+    if (i === order[done]){
+      done++; popAt[i] = now();
+      if (done >= N) return phaseCleared();
+      SFX.play('select');
+    } else {
+      wrongDot = i; wrongAt = now();
+      lose();
+    }
+  }
+
+  function phaseCleared(){
+    if (phase + 1 >= PHASES) return win();
+    state = 'between';
+    bars[phase].classList.add('done');
+    SFX.play('stage');
+    showOverlay(`Phase ${phase + 1} Cleared`, '', '', []);
+    setTimeout(() => {
+      if (state !== 'between') return;
+      hideOverlay(); phase++; newPhase(); state = 'running'; SFX.resetCountdown();
+    }, 850);
+  }
+
+  function win(){
+    state = 'won'; endTime = now() - runStart;
+    bars[phase].classList.add('done');
+    const pb = record(true);
+    SFX.play('win');
+    showOverlay('All Phases Cleared', 'win', `${endTime.toFixed(1)}s${pb ? ' · new best!' : ''}`);
+  }
+  function lose(timeout){
+    state = 'lost';
+    bars[phase].classList.add('lost');
+    record(false);
+    SFX.play(timeout ? 'lose' : 'bad');
+    showOverlay('Phase Lost', 'lost', timeout ? "Time's up." : `Wrong dot. You had connected ${done} of ${N} in phase ${phase + 1}.`);
+  }
+
+  function record(won){
+    stats.runs++;
+    let pb = false;
+    if (won){ stats.wins++; if (stats.best == null || endTime < stats.best){ stats.best = endTime; pb = true; } }
+    store.set('dots.stats', stats); renderStats();
+    return pb;
+  }
+  function renderStats(){
+    $('stats').innerHTML = stats.runs
+      ? `Best <b>${stats.best != null ? stats.best.toFixed(1) + 's' : '—'}</b> · cleared <b>${stats.wins}/${stats.runs}</b>`
+      : 'No runs yet';
+  }
+
+  const bars = [...$('bars').children];
+  function paintBars(){
+    bars.forEach((b, i) => {
+      if (i > phase || (i === phase && state === 'idle')) b.className = '';
+      if (i < phase) b.className = 'done';
+    });
+  }
+
+  function showOverlay(title, kind, sub, btns){
+    $('oBox').textContent = title; $('oBox').className = 'box' + (kind ? ' ' + kind : '');
+    $('oSub').innerHTML = sub || '';
+    const b = $('oBtns'); b.innerHTML = '';
+    for (const [label, fn, primary] of (btns || [[state === 'idle' ? 'Start (Enter)' : 'Again (R)', start, true]])){
+      const e = document.createElement('button'); e.textContent = label; if (primary) e.className = 'primary';
+      e.addEventListener('pointerdown', ev => ev.stopPropagation());
+      e.onclick = fn; b.appendChild(e);
+    }
+    $('overlay').classList.add('show');
+  }
+  const hideOverlay = () => $('overlay').classList.remove('show');
+
+  function toIdle(){
+    state = 'idle'; phase = 0;
+    const b = makeBoard(); dots = b.pts; order = b.path; done = 1;
+    bars.forEach(x => x.className = '');
+    showOverlay('Vangelico – Connect the Dots', 'intro', 'Always click the dot closest to the last one you connected. 2 phases · one wrong click fails.');
+    renderStats();
+  }
+
+  // ---------- loop ----------
+  function frame(){
+    let left = PHASE_TIME;
+    if (state === 'running'){
+      const el = now() - phaseStart;
+      left = Math.max(0, PHASE_TIME - el);
+      const ticks = Math.min(TICKS, Math.floor(el / TICK) + 1);          // the bar moves in steps, like in-game
+      bars[phase].querySelector('i').style.width = (ticks / TICKS * 100) + '%';
+      if (el >= PHASE_TIME) lose(true);
+      else SFX.countdown(left, 3);
+    } else if (state === 'between' || state === 'won') left = PHASE_TIME - 0;
+    if (state === 'idle') bars.forEach(b => b.querySelector('i').style.width = '0%');
+    $('hTime').textContent = (state === 'running' ? left : state === 'lost' ? 0 : PHASE_TIME).toFixed(1) + 's';
+    $('hPhase').textContent = `${Math.min(phase + 1, PHASES)}/${PHASES}`;
+    $('hDots').textContent = `${done}/${N}`;
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- input ----------
+  const toLogical = e => { const r = cv.getBoundingClientRect(); return {x: (e.clientX - r.left) / r.width * L, y: (e.clientY - r.top) / r.height * L}; };
+  cv.addEventListener('pointerdown', e => { if (e.button !== 0 && e.pointerType === 'mouse') return; e.preventDefault(); const p = toLogical(e); pointer = p; click(p); });
+  cv.addEventListener('pointermove', e => {
+    pointer = toLogical(e);
+    const i = state === 'running' ? hitDot(pointer) : -1;
+    hover = i >= 0 && !order.slice(0, done).includes(i) ? i : -1;
+    cv.classList.toggle('over', hover >= 0);
+  });
+  cv.addEventListener('pointerleave', () => { pointer = null; hover = -1; cv.classList.remove('over'); });
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'r' || e.key === 'R') start();
+    else if (e.key === 'Enter' && state === 'idle') start();
+  });
+  $('bRestart').onclick = e => { e.currentTarget.blur(); start(); };
+
+  window.addEventListener('resize', resize);
+  resize(); toIdle(); requestAnimationFrame(frame);
+})();
+</script>
+<script src="../watch.js"></script>
+</body>
+</html>

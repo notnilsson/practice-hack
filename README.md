@@ -26,6 +26,11 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 |------|--------|-------------|
 | Ball Gate | [`safe/`](safe/) | Hold left click to open the gate for orange balls, release to block red ones. 3 phases; any mistake fails instantly. |
 
+### Vangelico
+| Game | Folder | Description |
+|------|--------|-------------|
+| Connect the Dots | [`dots/`](dots/) | From a random start dot, always click the closest unconnected dot. 2 phases of 10 dots; one wrong click fails. |
+
 ## Adding a game
 
 1. Put the game in its own folder as `index.html` (e.g. `lockpick/index.html`). Each game is a single self-contained HTML file.

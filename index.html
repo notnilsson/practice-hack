@@ -21,8 +21,8 @@
   h1 .logo{width:40px;height:40px;flex:none}
   .quote{display:inline-block;margin:0 0 18px;padding:6px 14px 6px 12px;border-left:3px solid var(--accent);background:rgba(255,176,0,.07);border-radius:0 6px 6px 0;color:#f0d9a0;font-style:italic;font-size:15px;letter-spacing:.2px}
   .lead{margin:0 0 24px;color:var(--muted)}
-  #jobs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(460px,100%),1fr));gap:16px;align-items:start}
-  section.job{margin:0;background:rgba(17,19,23,.65);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px;scroll-margin-top:16px}
+  #jobs{columns:2 460px;column-gap:16px}   /* sections stack into columns, so short ones fill the gaps */
+  section.job{break-inside:avoid;display:inline-block;width:100%;margin:0 0 16px;background:rgba(17,19,23,.65);border:1px solid var(--line);border-radius:12px;padding:12px 12px 12px;scroll-margin-top:16px}
   section.job h2{display:flex;align-items:baseline;gap:10px;margin:0 0 10px;padding:2px 4px 9px;border-bottom:1px solid var(--line);font-size:16px;letter-spacing:-.1px}
   section.job h2 small{font-size:12px;font-weight:500;color:var(--muted)}
   .grid{display:flex;flex-direction:column;gap:10px}
@@ -57,6 +57,7 @@
     {id: 'arms-deal', name: 'Arms Deal'},
     {id: 'dark-queue', name: 'Dark Queue'},
     {id: 'store-safe', name: '24/7 Store Safe'},
+    {id: 'vangelico', name: 'Vangelico'},
   ];
 
   // To add a game: put it in its own folder (e.g. lockpick/index.html) and add an entry here,
@@ -146,6 +147,19 @@
         </g>
         <g stroke="#a9f3c4" stroke-width=".8"><path d="M50 8V20M84 62L94 66M14 30L22 34M64 88L60 78"/></g>
         <g fill="#d9e46a"><rect x="72" y="16" width="5" height="4"/><rect x="12" y="62" width="5" height="4"/><rect x="82" y="78" width="5" height="4"/></g>
+      </svg>`
+    },
+    {
+      path: 'dots/',
+      job: 'vangelico',
+      name: 'Connect the Dots',
+      desc: 'Start on a random lit dot, then always click the dot closest to the last one you connected. 2 phases, one wrong click fails.',
+      tags: ['Click', '2 phases', '1 mistake = fail'],
+      thumb: `<svg viewBox="0 0 100 100">
+        <path d="M22 70 L36 58 L52 62 L60 44 L78 30" fill="none" stroke="#ec3039" stroke-width="2"/>
+        <path d="M78 30 L70 18" fill="none" stroke="#ec3039" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/>
+        ${[[22,70],[36,58],[52,62],[60,44],[78,30]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.6" fill="#f0333d"/>`).join('')}
+        ${[[70,18],[24,28],[40,22],[84,72],[60,84]].map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3.4" fill="rgba(130,18,26,.4)" stroke="rgba(215,40,50,.7)" stroke-width="1"/>`).join('')}
       </svg>`
     },
   ];
