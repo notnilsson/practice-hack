@@ -728,7 +728,7 @@
           } else {
             col = vec3(0.0, 0.04, 0.016);
           }
-          float fog = 1.0 - exp(-vDist * vDist * 0.000045);
+          float fog = 1.0 - exp(-vDist * vDist * 0.0001);
           gl_FragColor = vec4(mix(col, uFog, fog), 1.0);
         }`
     });
@@ -859,7 +859,7 @@
           col += vec3(0.3, 0.95, 0.55) * step(abs(along), 0.9) * step(fract(down / 1.3), 0.16) * 0.7;   // ladder rungs
           col += vec3(0.05, 0.3, 0.14) * smoothstep(4.0, 0.0, down);
         }
-        gl_FragColor = vec4(fogged(col, 0.00022, vec3(0.0, 0.04, 0.016)), 1.0);
+        gl_FragColor = vec4(fogged(col * 0.6, 0.0005, vec3(0.0, 0.028, 0.011)), 1.0);
       }`;
     const WATER = FS + `
       void main(){
@@ -870,7 +870,7 @@
         col += vec3(0.1, 0.9, 0.4) * glyph(cell, fract(q), 9.0) * step(0.86, hash(cell + 3.0)) * (0.3 + 0.3 * sin(uTime * 2.0 + hash(cell) * 6.28));
         float hd = min(holeD(uHole[0]), holeD(uHole[1]));
         col += vec3(0.25, 0.9, 0.5) * exp(-hd * hd / 14.0) * 0.5;
-        gl_FragColor = vec4(fogged(col, 0.00022, vec3(0.0, 0.04, 0.016)), 1.0);
+        gl_FragColor = vec4(fogged(col * 0.6, 0.0005, vec3(0.0, 0.028, 0.011)), 1.0);
       }`;
     const GROUND = FS + `
       uniform vec3 uFog;
@@ -888,7 +888,7 @@
         }
         col += vec3(0.25, 1.0, 0.5) * smoothstep(HR + 0.7, HR, hd) * 1.1;         // glowing rim
         col += vec3(0.05, 0.4, 0.17) * exp(-(hd - HR) * 0.22) * 0.5;
-        gl_FragColor = vec4(fogged(col, 0.000045, uFog), 1.0);
+        gl_FragColor = vec4(fogged(col, 0.0001, uFog), 1.0);
       }`;
     const sm = (fs, mode, side, extra) => new THREE.ShaderMaterial({uniforms: Object.assign({uMode: {value: mode}}, U, extra || {}), vertexShader: VS, fragmentShader: fs, side: side || THREE.FrontSide});
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400).rotateX(-Math.PI / 2), sm(GROUND, 0, THREE.FrontSide, {uFog: mat.uniforms.uFog}));
