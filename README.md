@@ -33,6 +33,11 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 | Door Panel | [`door/`](door/) | Keys fall one or two at a time; hold pairs together before they reach the bottom. 2 phases of 10 keys; one wrong key fails. |
 | Back Safe | [`vsafe/`](vsafe/) | Memory match on a 4×4 grid of 8 icon pairs. 2 phases, no fail – tracks time and misses. |
 
+### Fleeca Bank
+| Game | Folder | Description |
+|------|--------|-------------|
+| VAR (Order) | [`var/`](var/) | Memorise 8 numbered squares in 3s, then click them 1→8 while they drift blank. 1 phase, 20s, one wrong click fails. |
+
 ## Adding a game
 
 1. Put the game in its own folder as `index.html` (e.g. `lockpick/index.html`). Each game is a single self-contained HTML file.

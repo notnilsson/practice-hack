@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0e1014">
+<title>VAR (Order) – Fleeca Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--w:900px;--fs:1px;--text:#dcdcdc;--muted:#8b8b8b;--red:#e3262f;--green:#36c16f}
+  *{box-sizing:border-box}
+  html{background:#08090b}
+  html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:radial-gradient(ellipse at 50% 30%,#22211f 0%,#0f0e0d 65%,#080707 100%) fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .topbar{width:var(--w);display:flex}
+  .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
+    background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
+  .back svg{width:16px;height:16px;transition:transform .15s}
+  .back:hover{background:rgba(227,38,47,.12);border-color:var(--red);color:#fff}
+  .back:hover svg{transform:translateX(-2px)}
+  .back:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+  /* ---- the in-game panel ---- */
+  .tech{font-family:Orbitron,"Eurostile","Bank Gothic","Segoe UI",system-ui,sans-serif;text-transform:uppercase}
+  .panel{position:relative;width:var(--w);background:rgba(28,28,28,.94);border:1px solid #333;border-radius:calc(var(--fs) * 10);
+    padding:0 calc(var(--fs) * 18) calc(var(--fs) * 14);box-shadow:0 10px 40px rgba(0,0,0,.6);user-select:none;-webkit-user-select:none}
+  .ptitle{display:flex;align-items:center;justify-content:center;gap:calc(var(--fs) * 10);height:calc(var(--fs) * 46);color:#f2f2f2;
+    font-weight:800;font-size:calc(var(--fs) * 17);letter-spacing:.32em}
+  .ptitle svg{width:calc(var(--fs) * 20);height:calc(var(--fs) * 20);color:#bbb}
+  .field{position:relative;width:100%;aspect-ratio:1000/606;background:#0c0c0c;border-radius:calc(var(--fs) * 6);overflow:hidden;touch-action:none}
+  .head{position:absolute;left:0;right:0;top:calc(var(--fs) * 12);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .memo{font-weight:800;font-size:calc(var(--fs) * 9.5);color:#e8e8e8;letter-spacing:.06em}
+  .mbar{margin-top:calc(var(--fs) * 6);width:calc(var(--fs) * 148);height:calc(var(--fs) * 2);background:#2a2a2a}
+  .mbar i{display:block;height:100%;width:100%;background:var(--red)}
+  .find{display:none;flex-direction:column;align-items:center}
+  .find small{font-weight:600;font-size:calc(var(--fs) * 8.5);color:#7a7a7a;letter-spacing:.04em}
+  .find b{font-weight:800;font-size:calc(var(--fs) * 26);color:var(--red);line-height:1.05}
+  .field.finding .memo,.field.finding .mbar{display:none}
+  .field.finding .find{display:flex}
+  .count{position:absolute;left:0;right:0;bottom:calc(var(--fs) * 10);text-align:center;font-weight:600;font-size:calc(var(--fs) * 8.5);color:#a8a8a8;letter-spacing:.12em;pointer-events:none;display:none}
+  .field.finding .count{display:block}
+
+  .sq{position:absolute;left:0;top:0;display:flex;align-items:center;justify-content:center;border-radius:calc(var(--fs) * 4);
+    border:calc(var(--fs) * 1.6) solid rgba(200,36,42,.75);background:#0d0d0d;color:#fff;font-weight:800;font-size:calc(var(--fs) * 17);cursor:pointer;will-change:transform}
+  .sq span{visibility:hidden}
+  .field.memorising .sq{border-color:#d22a31;cursor:default}
+  .field.memorising .sq span{visibility:visible}
+  .sq:hover{border-color:#ff4a52}
+  .sq.ok{background:#123b25;border-color:#2f9d5c;color:#43c97a;cursor:default}
+  .sq.ok span,.sq.bad span,.sq.show span{visibility:visible}
+  .sq.bad{background:#4a0d10;border-color:#ff4a52}
+  .sq.show{border-color:#8a2a2e;color:#cfcfcf}
+  .sq.gone{opacity:0;transition:opacity .2s}
+
+  .result{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--fs) * 10);background:#0b0b0b}
+  .result.show{display:flex}
+  .result.peek{background:rgba(8,8,8,.5)}
+  .result .ic{width:calc(var(--fs) * 34);height:calc(var(--fs) * 34);border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .result .ic svg{width:55%;height:55%}
+  .result h2{margin:0;font-weight:800;font-size:calc(var(--fs) * 28);letter-spacing:.14em}
+  .result p{margin:0;font-weight:600;font-size:calc(var(--fs) * 9);color:#8d8d8d;letter-spacing:.18em}
+  .result.won .ic{background:var(--green);color:#0b0b0b}
+  .result.won h2{color:var(--green)}
+  .result.lost .ic{background:var(--red);color:#0b0b0b}
+  .result.lost h2{color:var(--red)}
+  .result .btns{margin-top:calc(var(--fs) * 10)}
+
+  .tfoot{display:flex;justify-content:space-between;margin-top:calc(var(--fs) * 10);font-weight:600;font-size:calc(var(--fs) * 7.5);color:#7a7a7a;letter-spacing:.14em}
+  .tfoot b{color:#d8d8d8;font-weight:800;letter-spacing:.05em;text-transform:none}
+  .tbar{margin-top:calc(var(--fs) * 4);height:calc(var(--fs) * 3);background:#2b2b2b;border-radius:2px;overflow:hidden}
+  .tbar i{display:block;height:100%;width:100%;background:var(--red)}
+
+  .overlay{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px;background:rgba(6,6,6,.82);border-radius:calc(var(--fs) * 10)}
+  .overlay.show{display:flex}
+  .box{border:1px solid #7a2a2e;border-radius:8px;background:rgba(10,10,11,.92);padding:16px 26px;font-size:17px;font-weight:600;color:#ffb0b0;font-family:"Segoe UI",system-ui,sans-serif}
+  .sub{color:#b5b5b5;font-size:13px;max-width:90%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#9c1f27;border-color:#e0333d;color:#fff}
+  button.primary:hover{background:#b3232c}
+
+  .row{width:var(--w);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--w);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,18,18,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .rules{color:#8a8a8a;font-size:12px;line-height:1.5;padding:2px 12px 14px}
+  .rules b{color:#cfcfcf}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
+
+  <div class="panel">
+    <div class="ptitle tech">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 20V4M3 8l4-4 4 4"/><path d="M15 4h3v6M15 10h6"/><circle cx="18" cy="17" r="3"/></svg>
+      Order
+    </div>
+    <div class="field tech" id="field">
+      <div class="head">
+        <div class="memo">Memorise the order</div>
+        <div class="mbar"><i id="mbar"></i></div>
+        <div class="find"><small>Find</small><b id="next">1</b></div>
+      </div>
+      <div id="squares"></div>
+      <div class="count" id="count">0 / 8 found</div>
+      <div class="result" id="result">
+        <div class="ic" id="rIcon"></div>
+        <h2 id="rTitle"></h2>
+        <p id="rSub"></p>
+        <div class="btns"><button class="primary" id="bAgain">Again (Enter)</button></div>
+      </div>
+    </div>
+    <div class="tfoot tech"><span>Time remaining</span><b id="tLeft">20s</b></div>
+    <div class="tbar"><i id="tbar"></i></div>
+
+    <div class="overlay show" id="overlay">
+      <div class="box">Fleeca – VAR</div>
+      <div class="sub">8 numbered squares show for 3 seconds, then go blank and keep drifting around.<br>Click them in order 1 → 8. One wrong click fails.</div>
+      <div class="btns"><button class="primary" id="bStart">Start (Enter)</button></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>How to play</summary>
+    <div class="rules">
+      Eight squares numbered <b>1–8</b> appear for about <b>3 seconds</b> (the short red bar under "Memorise the order") while they slowly drift.
+      Then the numbers go blank and the squares keep moving. Click them in order from 1 to 8 – the big red number shows which one to find next.
+      A correct square turns green and disappears. <b>One wrong click fails</b>, and so does running out of the <b>20 second</b> timer.
+      There is only <b>1 phase</b>. Keys: R = restart, Enter = start.
+    </div>
+  </details>
+</main>
+
+<script src="../sfx.js"></script>
+<script>
+(() => {
+  // Values from the clip: 8 squares, ~3s to memorise (with the squares already drifting), 20s to find them all,
+  // squares about 6% of the field wide drifting at roughly 5–8% of the field width per second.
+  const W = 1000, H = 606, N = 8, BOX = 59, MEMO = 3, TIME = 20, VMIN = 55, VMAX = 85, TOPY = 72, BOTY = 32;
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let stats = store.get('var.stats', {runs:0, wins:0, best:null});
+  const $ = id => document.getElementById(id);
+  const field = $('field'), host = $('squares');
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const now = () => performance.now() / 1000;
+
+  let state = 'idle', sq = [], next = 1, t0 = 0, findStart = 0, endTime = 0, scale = 1;
+
+  function place(){
+    const pts = [];
+    for (let n = 1; n <= N; n++){
+      let x, y, tries = 0;
+      do { x = rnd(10, W - BOX - 10); y = rnd(TOPY, H - BOX - BOTY); tries++; }
+      while (tries < 200 && pts.some(p => Math.hypot(p.x - x, p.y - y) < BOX * 1.6));
+      const a = rnd(0, Math.PI * 2);
+      pts.push({n, x, y, a, v: rnd(VMIN, VMAX), w: 0, el: null, found: false});
+    }
+    return pts;
+  }
+  function build(){
+    host.innerHTML = '';
+    sq = place();
+    for (const s of sq){
+      const el = document.createElement('div');
+      el.className = 'sq'; el.innerHTML = `<span>${s.n}</span>`;
+      el.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); hit(s); });
+      host.appendChild(el); s.el = el;
+    }
+    layout();
+  }
+  function layout(){
+    for (const s of sq){
+      s.el.style.width = s.el.style.height = BOX * scale + 'px';
+      s.el.style.transform = `translate(${s.x * scale}px,${s.y * scale}px)`;
+    }
+  }
+
+  function move(dt){
+    for (const s of sq){
+      if (s.found) continue;
+      s.w += (rnd(-1, 1) * 2.2 - s.w * 0.6) * dt;       // gently wandering heading
+      s.a += s.w * dt;
+      s.x += Math.cos(s.a) * s.v * dt; s.y += Math.sin(s.a) * s.v * dt;
+      if (s.x < 6){ s.x = 6; s.a = Math.PI - s.a; }
+      if (s.x > W - BOX - 6){ s.x = W - BOX - 6; s.a = Math.PI - s.a; }
+      if (s.y < TOPY){ s.y = TOPY; s.a = -s.a; }
+      if (s.y > H - BOX - BOTY){ s.y = H - BOX - BOTY; s.a = -s.a; }
+    }
+    layout();
+  }
+
+  function hit(s){
+    if (state !== 'finding' || s.found) return;
+    if (s.n === next){
+      s.found = true; s.el.classList.add('ok'); SFX.play('select');
+      setTimeout(() => s.el.classList.add('gone'), 450);
+      next++;
+      $('count').textContent = `${next - 1} / ${N} found`;
+      if (next > N) return win();
+      $('next').textContent = next;
+    } else {
+      s.el.classList.add('bad');
+      lose('Wrong order!');
+    }
+  }
+
+  function start(){
+    $('overlay').classList.remove('show');
+    $('result').className = 'result';
+    field.className = 'field tech memorising';
+    next = 1; $('next').textContent = 1; $('count').textContent = `0 / ${N} found`;
+    $('tLeft').textContent = TIME + 's'; $('tbar').style.width = '100%'; $('mbar').style.width = '100%';
+    build(); t0 = now(); state = 'memorising';
+    SFX.resetCountdown(); SFX.play('start');
+  }
+  function beginFind(){
+    state = 'finding'; findStart = now();
+    field.className = 'field tech finding';
+    SFX.play('blip');
+  }
+  function win(){
+    state = 'won'; endTime = now() - findStart;
+    stats.runs++; stats.wins++;
+    const pb = stats.best == null || endTime < stats.best; if (pb) stats.best = endTime;
+    store.set('var.stats', stats); renderStats();
+    setTimeout(() => {
+      showResult('won', 'Complete!', `All 8 in order! · ${endTime.toFixed(1)}s${pb ? ' · new best' : ''}`,
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>');
+      SFX.play('win');
+    }, 350);
+  }
+  function lose(why){
+    state = 'lost';
+    stats.runs++; store.set('var.stats', stats); renderStats();
+    SFX.play(why.startsWith('Out') ? 'lose' : 'bad');
+    for (const s of sq) if (!s.found && !s.el.classList.contains('bad')) s.el.classList.add('show');   // reveal where they all were
+    setTimeout(() => {
+      if (state !== 'lost') return;
+      showResult('lost peek', 'Failed!', `${why} · ${next - 1} / ${N} found`,
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>');
+    }, 900);
+  }
+  function showResult(kind, title, sub, icon){
+    $('rIcon').innerHTML = icon; $('rTitle').textContent = title; $('rSub').textContent = sub;
+    $('result').className = 'result show ' + kind;
+  }
+  function renderStats(){
+    $('stats').innerHTML = stats.runs ? `Best <b>${stats.best != null ? stats.best.toFixed(1) + 's' : '—'}</b> · cleared <b>${stats.wins}/${stats.runs}</b>` : 'No runs yet';
+  }
+
+  let last = now();
+  function frame(){
+    const t = now(), dt = Math.min(0.05, t - last); last = t;
+    if (state === 'memorising'){
+      const el = t - t0;
+      $('mbar').style.width = Math.max(0, 100 - el / MEMO * 100) + '%';
+      move(dt);
+      if (el >= MEMO) beginFind();
+    } else if (state === 'finding'){
+      const left = Math.max(0, TIME - (t - findStart));
+      $('tLeft').textContent = Math.ceil(left) + 's';
+      $('tbar').style.width = (left / TIME * 100) + '%';
+      SFX.countdown(left, 5);
+      move(dt);
+      if (left <= 0) lose('Out of time!');
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function resize(){
+    const w = Math.floor(Math.max(300, Math.min(1000, window.innerWidth - 32, (window.innerHeight - 210) * 1.5)));
+    document.documentElement.style.setProperty('--w', w + 'px');
+    document.documentElement.style.setProperty('--fs', (w / 760) + 'px');
+    requestAnimationFrame(() => { scale = field.clientWidth / W; layout(); });
+  }
+
+  window.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'r' || e.key === 'R') start();
+    else if (e.key === 'Enter' && (state === 'idle' || state === 'won' || state === 'lost')){ e.preventDefault(); start(); }
+  });
+  for (const id of ['bStart', 'bAgain', 'bRestart']) $(id).onclick = e => { e.currentTarget.blur(); start(); };
+  window.addEventListener('resize', resize);
+  resize(); build(); renderStats(); requestAnimationFrame(frame);
+  field.classList.add('memorising');      // the idle preview shows the numbers behind the start box
+})();
+</script>
+<script src="../watch.js"></script>
+<script src="../blink.js"></script>
+</body>
+</html>
