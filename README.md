@@ -30,7 +30,7 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 | Game | Folder | Description |
 |------|--------|-------------|
 | Connect the Dots | [`dots/`](dots/) | From a random start dot, always click the closest unconnected dot. 2 phases of 10 dots; one wrong click fails. |
-| Door Panel | [`door/`](door/) | Keys fall two at a time; hold both matching keys together before they reach the bottom. 2 phases of 10 keys; one wrong key fails. |
+| Door Panel | [`door/`](door/) | Keys fall one or two at a time; hold pairs together before they reach the bottom. 2 phases of 10 keys; one wrong key fails. |
 
 ## Adding a game
 

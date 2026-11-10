@@ -84,8 +84,8 @@
   <details>
     <summary>How to play</summary>
     <div class="rules">
-      Letters and numbers fall down the panel, usually <b>two at a time</b>. Press the matching keys on your keyboard and
-      <b>hold both down together</b> to clear them, before they reach the bottom. Pressing a key that isn't on screen,
+      Letters and numbers fall down the panel, <b>one or two at a time</b>. Press the matching key on your keyboard; when two fall together,
+      <b>hold both down at the same time</b> to clear them, before they reach the bottom. Pressing a key that isn't on screen,
       or letting a key reach the bottom, <b>fails the hack</b>. There are <b>2 phases</b> of 10 keys; the red bar shows your progress.
       Keys: Enter = start, Esc = restart.
     </div>
@@ -118,7 +118,7 @@
   // sizes of the drops in one phase: pairs, with a few single keys, adding up to 10
   function makePlan(){
     const p = []; let left = PER;
-    while (left > 0){ const n = left === 1 || Math.random() < 0.18 ? 1 : 2; p.push(n); left -= n; }
+    while (left > 0){ const n = left === 1 || Math.random() < 0.55 ? 1 : 2;   // the clip had ~11 singles to ~7 pairs p.push(n); left -= n; }
     return p;
   }
   function spawn(){
@@ -231,7 +231,7 @@
     state = 'idle'; phase = 0; cleared = 0; wave = null;
     bars.forEach(b => { b.className = ''; b.querySelector('i').style.width = '0%'; });
     $('count').textContent = `0/${PER}`;
-    showOverlay('Vangelico – Door Panel', 'intro', 'Press and hold both falling keys together before they reach the bottom. 2 phases · one wrong key fails.');
+    showOverlay('Vangelico – Door Panel', 'intro', 'Press the falling keys before they reach the bottom – hold both together when two fall at once. 2 phases · one wrong key fails.');
     renderStats();
   }
 
