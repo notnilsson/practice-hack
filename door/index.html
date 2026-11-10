@@ -118,7 +118,7 @@
   // sizes of the drops in one phase: pairs, with a few single keys, adding up to 10
   function makePlan(){
     const p = []; let left = PER;
-    while (left > 0){ const n = left === 1 || Math.random() < 0.55 ? 1 : 2;   // the clip had ~11 singles to ~7 pairs p.push(n); left -= n; }
+    while (left > 0){ const n = left === 1 || Math.random() < 0.55 ? 1 : 2;   /* the clip had ~11 singles to ~7 pairs */ p.push(n); left -= n; }
     return p;
   }
   function spawn(){
