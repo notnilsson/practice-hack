@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0e1014">
+<title>Wire Cut – Fleeca Practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--w:900px;--fs:1px;--text:#dcdcdc;--muted:#8b8b8b;--red:#e3262f;--green:#36c16f}
+  *{box-sizing:border-box}
+  html{background:#08090b}
+  html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:radial-gradient(ellipse at 50% 30%,#22211f 0%,#0f0e0d 65%,#080707 100%) fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .topbar{width:var(--w);display:flex}
+  .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
+    background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
+  .back svg{width:16px;height:16px;transition:transform .15s}
+  .back:hover{background:rgba(227,38,47,.12);border-color:var(--red);color:#fff}
+  .back:hover svg{transform:translateX(-2px)}
+  .back:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+
+  /* ---- the in-game panel ---- */
+  .tech{font-family:Orbitron,"Eurostile","Bank Gothic","Segoe UI",system-ui,sans-serif;text-transform:uppercase}
+  .panel{position:relative;width:var(--w);background:rgba(28,28,28,.94);border:1px solid #333;border-radius:calc(var(--fs) * 10);
+    padding:0 calc(var(--fs) * 18) calc(var(--fs) * 14);box-shadow:0 10px 40px rgba(0,0,0,.6);user-select:none;-webkit-user-select:none}
+  .ptitle{display:flex;align-items:center;justify-content:center;gap:calc(var(--fs) * 10);height:calc(var(--fs) * 46);color:#f2f2f2;
+    font-weight:800;font-size:calc(var(--fs) * 17);letter-spacing:.32em}
+  .ptitle svg{width:calc(var(--fs) * 20);height:calc(var(--fs) * 20);color:#bbb}
+  .field{position:relative;width:100%;aspect-ratio:1000/606;background:#0c0c0c;border-radius:calc(var(--fs) * 6);overflow:hidden;touch-action:none}
+  .head{position:absolute;left:0;right:0;top:calc(var(--fs) * 12);display:flex;flex-direction:column;align-items:center;pointer-events:none}
+  .memo{font-weight:800;font-size:calc(var(--fs) * 9.5);color:#e8e8e8;letter-spacing:.06em}
+  .mbar{margin-top:calc(var(--fs) * 6);width:calc(var(--fs) * 148);height:calc(var(--fs) * 2);background:#2a2a2a}
+  .mbar i{display:block;height:100%;width:100%;background:var(--red)}
+  .find{display:none;flex-direction:column;align-items:center}
+  .find small{font-weight:600;font-size:calc(var(--fs) * 8.5);color:#7a7a7a;letter-spacing:.04em}
+  .find b{font-weight:800;font-size:calc(var(--fs) * 26);color:var(--red);line-height:1.05}
+  .field.finding .memo,.field.finding .mbar{display:none}
+  .field.finding .find{display:flex}
+  .count{position:absolute;left:0;right:0;bottom:calc(var(--fs) * 10);text-align:center;font-weight:600;font-size:calc(var(--fs) * 8.5);color:#a8a8a8;letter-spacing:.12em;pointer-events:none;display:none}
+  .field.finding .count{display:block}
+
+  .mbar i.mid{background:#f2b400}
+  .mbar i.hi{background:#27b866}
+  .field svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .slot{fill:#151515}
+  .wire{fill:none;stroke-width:5.5;stroke-linecap:round;filter:drop-shadow(0 3px 3px rgba(0,0,0,.7));pointer-events:none}
+  .hitw{fill:none;stroke:transparent;stroke-width:24;stroke-linecap:round;pointer-events:stroke;cursor:pointer}
+  .field:not(.finding) .hitw,.hitw.cut{pointer-events:none}
+  .wire.cut{opacity:.3}
+  .wire.bad{stroke-width:8}
+  .field.over .wire{opacity:.3}
+  .badge{transition:opacity .35s}
+  .field:not(.memorising) .badge{opacity:0}
+  .badge circle{fill:#0b0b0b;stroke-width:3}
+  .badge text{fill:#fff;font-weight:800;font-size:19px;text-anchor:middle;font-family:Orbitron,"Segoe UI",sans-serif}
+  .snip{fill:#0c0c0c;stroke:#888;stroke-width:1.5}
+  .sniptxt{fill:#ddd;font-weight:800;font-size:11px;text-anchor:middle;font-family:Orbitron,"Segoe UI",sans-serif;pointer-events:none}
+  .result{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--fs) * 10);background:#0b0b0b}
+  .result.show{display:flex}
+  .result.peek{background:rgba(8,8,8,.5)}
+  .result .ic{width:calc(var(--fs) * 34);height:calc(var(--fs) * 34);border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .result .ic svg{width:55%;height:55%}
+  .result h2{margin:0;font-weight:800;font-size:calc(var(--fs) * 28);letter-spacing:.14em}
+  .result p{margin:0;font-weight:600;font-size:calc(var(--fs) * 9);color:#8d8d8d;letter-spacing:.18em}
+  .result.won .ic{background:var(--green);color:#0b0b0b}
+  .result.won h2{color:var(--green)}
+  .result.lost .ic{background:var(--red);color:#0b0b0b}
+  .result.lost h2{color:var(--red)}
+  .result .btns{margin-top:calc(var(--fs) * 10)}
+
+  .tfoot{display:flex;justify-content:space-between;margin-top:calc(var(--fs) * 10);font-weight:600;font-size:calc(var(--fs) * 7.5);color:#7a7a7a;letter-spacing:.14em}
+  .tfoot b{color:#d8d8d8;font-weight:800;letter-spacing:.05em;text-transform:none}
+  .tbar{margin-top:calc(var(--fs) * 4);height:calc(var(--fs) * 3);background:#2b2b2b;border-radius:2px;overflow:hidden}
+  .tbar i{display:block;height:100%;width:100%;background:var(--red)}
+
+  .overlay{position:absolute;inset:0;z-index:3;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px;background:rgba(6,6,6,.82);border-radius:calc(var(--fs) * 10)}
+  .overlay.show{display:flex}
+  .box{border:1px solid #7a2a2e;border-radius:8px;background:rgba(10,10,11,.92);padding:16px 26px;font-size:17px;font-weight:600;color:#ffb0b0;font-family:"Segoe UI",system-ui,sans-serif}
+  .sub{color:#b5b5b5;font-size:13px;max-width:90%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#9c1f27;border-color:#e0333d;color:#fff}
+  button.primary:hover{background:#b3232c}
+
+  .row{width:var(--w);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--w);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,18,18,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .rules{color:#8a8a8a;font-size:12px;line-height:1.5;padding:2px 12px 14px}
+  .rules b{color:#cfcfcf}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
+
+  <div class="panel">
+    <div class="ptitle tech">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg>
+      Wire Cut
+    </div>
+    <div class="field tech" id="field">
+      <div class="head">
+        <div class="memo">Memorise the cut order</div>
+        <div class="mbar"><i id="mbar"></i></div>
+      </div>
+      <svg id="svg" viewBox="0 0 1000 606" preserveAspectRatio="none"></svg>
+      <div class="count" id="count">0 / 7 wires cut</div>
+      <div class="result" id="result">
+        <div class="ic" id="rIcon"></div>
+        <h2 id="rTitle"></h2>
+        <p id="rSub"></p>
+        <div class="btns"><button class="primary" id="bAgain">Again (Enter)</button></div>
+      </div>
+    </div>
+    <div class="tfoot tech"><span>Time remaining</span><b id="tLeft">10s</b></div>
+    <div class="tbar"><i id="tbar"></i></div>
+
+    <div class="overlay show" id="overlay">
+      <div class="box">Fleeca – Wire Cut</div>
+      <div class="sub">7 wires show their cut order for 3 seconds. Then the numbers vanish and the wires cross over.<br>Cut them in order 1 → 7 within 10 seconds. One wrong cut fails.</div>
+      <div class="btns"><button class="primary" id="bStart">Start (Enter)</button></div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>How to play</summary>
+    <div class="rules">
+      Seven coloured wires each show a number from <b>1–7</b> for about <b>3 seconds</b> (the short bar under "Memorise the cut order").
+      Then the numbers disappear and the right-hand ends swap places, so the wires cross. The colours and the left-hand ends stay where they were.
+      Click the wires in order from 1 to 7 to cut them. <b>One wrong cut fails</b>, and so does running out of the <b>10 second</b> timer.
+      There is only <b>1 phase</b>. Keys: R = restart, Enter = start.
+    </div>
+  </details>
+</main>
+
+<script src="../sfx.js"></script>
+<script>
+(() => {
+  // Values from the clip: 7 wires in a fixed colour order, ~3s to memorise, then the right-hand ends shuffle
+  // (about half a second) and you get 10s to cut them 1 → 7.
+  const N = 7, MEMO = 3, TIME = 10, MORPH = 0.55, XL = 58, XR = 942, Y0 = 130, DY = 61;
+  const COLORS = ['#b56be0', '#ffc20a', '#ff8a12', '#2a86ff', '#f2f2f2', '#12a84f', '#ff2a36'];
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let stats = store.get('wire.stats', {runs:0, wins:0, best:null});
+  const $ = id => document.getElementById(id);
+  const field = $('field'), svg = $('svg'), NS = 'http://www.w3.org/2000/svg';
+  const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); (parent || svg).appendChild(e); return e; };
+  const now = () => performance.now() / 1000;
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const ease = x => x * x * (3 - 2 * x);
+  const rowY = i => Y0 + i * DY;
+
+  let state = 'idle', wires = [], next = 1, t0 = 0, findStart = 0, morphed = 0;
+
+  function pathFor(w, k){                      // k = 0 straight (slightly sagging), 1 = crossed over
+    const yl = rowY(w.row), yr = yl + (rowY(w.to) - yl) * k, sag = 6 * (1 - k);
+    return `M${XL} ${yl} C${(XL + XR) / 2} ${yl + sag} ${(XL + XR) / 2} ${yr + sag} ${XR} ${yr}`;
+  }
+  function build(){
+    svg.innerHTML = '';
+    for (let i = 0; i < N; i++){ mk('rect', {class: 'slot', x: 0, y: rowY(i) - 10, width: 62, height: 20}); mk('rect', {class: 'slot', x: 938, y: rowY(i) - 10, width: 62, height: 20}); }
+    const nums = shuffle([...Array(N).keys()].map(i => i + 1));
+    let to; do { to = shuffle([...Array(N).keys()]); } while (to.filter((v, i) => v === i).length > 1);   // nearly every wire moves
+    wires = COLORS.map((color, row) => ({row, color, n: nums[row], to: to[row], cut: false}));
+    for (const w of wires){
+      w.line = mk('path', {class: 'wire', stroke: w.color, d: pathFor(w, 0)});
+      w.dl = mk('circle', {cx: XL - 12, cy: rowY(w.row), r: 4.5, fill: w.color, stroke: '#0b0b0b', 'stroke-width': 2});
+      w.dr = mk('circle', {cx: XR + 12, cy: rowY(w.row), r: 4.5, fill: w.color, stroke: '#0b0b0b', 'stroke-width': 2});
+    }
+    for (const w of wires){
+      w.badge = mk('g', {class: 'badge'});
+      mk('circle', {cx: 500, cy: rowY(w.row) + 4, r: 19, stroke: w.color}, w.badge);
+      mk('text', {x: 500, y: rowY(w.row) + 11}, w.badge).textContent = w.n;
+    }
+    for (const w of wires){
+      w.hit = mk('path', {class: 'hitw', d: pathFor(w, 0)});
+      w.hit.addEventListener('pointerdown', e => { e.preventDefault(); cut(w, e); });
+    }
+  }
+  function setMorph(k){
+    morphed = k;
+    for (const w of wires){
+      const d = pathFor(w, k); w.line.setAttribute('d', d); w.hit.setAttribute('d', d);
+      w.dr.setAttribute('cy', rowY(w.row) + (rowY(w.to) - rowY(w.row)) * k);
+    }
+  }
+
+  function cut(w, e){
+    if (state !== 'finding' || w.cut) return;
+    if (w.n !== next){ w.line.classList.add('bad'); return lose('Wrong wire!'); }
+    w.cut = true; w.hit.classList.add('cut'); SFX.play('select');
+    // open a gap in the wire where it was clicked
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * 1000, py = (e.clientY - r.top) / r.height * 606;
+    const len = w.line.getTotalLength(); let best = len / 2, bd = 1e9;
+    for (let l = 0; l <= len; l += 4){ const p = w.line.getPointAtLength(l), d = Math.hypot(p.x - px, p.y - py); if (d < bd){ bd = d; best = l; } }
+    best = Math.max(30, Math.min(len - 30, best));
+    w.line.setAttribute('stroke-dasharray', `${best - 13} 26 ${len}`); w.line.classList.add('cut');
+    const p = w.line.getPointAtLength(best);
+    mk('circle', {class: 'snip', cx: p.x, cy: p.y, r: 10}); mk('text', {class: 'sniptxt', x: p.x, y: p.y + 4}).textContent = w.n;
+    next++; $('count').textContent = `${next - 1} / ${N} wires cut`;
+    if (next > N) win();
+  }
+
+  function start(){
+    $('overlay').classList.remove('show'); $('result').className = 'result';
+    field.className = 'field tech memorising';
+    next = 1; $('count').textContent = `0 / ${N} wires cut`;
+    $('tLeft').textContent = TIME + 's'; $('tbar').style.width = '100%'; $('mbar').style.width = '100%';
+    build(); t0 = now(); state = 'memorising';
+    SFX.resetCountdown(); SFX.play('start');
+  }
+  function win(){
+    state = 'won'; const tm = now() - findStart;
+    stats.runs++; stats.wins++;
+    const pb = stats.best == null || tm < stats.best; if (pb) stats.best = tm;
+    store.set('wire.stats', stats); renderStats();
+    setTimeout(() => {
+      showResult('won', 'Complete!', `All 7 wires cut · ${tm.toFixed(1)}s${pb ? ' · new best' : ''}`,
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>');
+      SFX.play('win');
+    }, 350);
+  }
+  function lose(why){
+    state = 'lost'; field.classList.add('over');
+    stats.runs++; store.set('wire.stats', stats); renderStats();
+    SFX.play(why.startsWith('Out') ? 'lose' : 'bad');
+    showResult('lost peek', 'Failed', `${why} · ${next - 1} / ${N} wires cut`,
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>');
+  }
+  function showResult(kind, title, sub, icon){
+    $('rIcon').innerHTML = icon; $('rTitle').textContent = title; $('rSub').textContent = sub;
+    $('result').className = 'result show ' + kind;
+  }
+  function renderStats(){
+    $('stats').innerHTML = stats.runs ? `Best <b>${stats.best != null ? stats.best.toFixed(1) + 's' : '—'}</b> · cleared <b>${stats.wins}/${stats.runs}</b>` : 'No runs yet';
+  }
+
+  function frame(){
+    const t = now();
+    if (state === 'memorising'){
+      const k = Math.max(0, 1 - (t - t0) / MEMO), bar = $('mbar');
+      bar.style.width = k * 100 + '%'; bar.className = k > 0.5 ? 'hi' : k > 0.22 ? 'mid' : '';
+      if (k <= 0){ state = 'morph'; t0 = t; field.className = 'field tech'; SFX.play('blip'); }
+    } else if (state === 'morph'){
+      const k = Math.min(1, (t - t0) / MORPH); setMorph(ease(k));
+      if (k >= 1){ state = 'finding'; findStart = t; field.className = 'field tech finding'; }
+    } else if (state === 'finding'){
+      const left = Math.max(0, TIME - (t - findStart));
+      $('tLeft').textContent = Math.ceil(left) + 's'; $('tbar').style.width = (left / TIME * 100) + '%';
+      SFX.countdown(left, 5);
+      if (left <= 0) lose('Out of time!');
+    }
+    requestAnimationFrame(frame);
+  }
+  function resize(){
+    const w = Math.floor(Math.max(300, Math.min(1000, window.innerWidth - 32, (window.innerHeight - 210) * 1.5)));
+    document.documentElement.style.setProperty('--w', w + 'px');
+    document.documentElement.style.setProperty('--fs', (w / 760) + 'px');
+  }
+  window.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'r' || e.key === 'R') start();
+    else if (e.key === 'Enter' && state !== 'memorising' && state !== 'morph' && state !== 'finding'){ e.preventDefault(); start(); }
+  });
+  for (const id of ['bStart', 'bAgain', 'bRestart']) $(id).onclick = e => { e.currentTarget.blur(); start(); };
+  window.addEventListener('resize', resize);
+  resize(); build(); renderStats(); field.classList.add('memorising'); requestAnimationFrame(frame);
+})();
+</script>
+<script src="../watch.js"></script>
+<script src="../blink.js"></script>
+</body>
+</html>

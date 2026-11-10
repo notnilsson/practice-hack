@@ -185,6 +185,16 @@
       </svg>`
     },
     {
+      path: 'wire/',
+      job: 'fleeca',
+      name: 'Wire Cut',
+      desc: 'Memorise the cut order of 7 coloured wires in 3 seconds, then cut them 1 → 7 after they cross over. 10 seconds, one wrong cut fails.',
+      tags: ['Memory', '1 phase', '10s timer', '1 mistake = fail'],
+      thumb: `<svg viewBox="0 0 100 100" fill="none" stroke-width="2.6" stroke-linecap="round">
+        ${[['#b56be0',0,4],['#ffc20a',1,2],['#ff8a12',2,6],['#2a86ff',3,0],['#f2f2f2',4,5],['#12a84f',5,1],['#ff2a36',6,3]].map(([c,a,b])=>`<path stroke="${c}" d="M10 ${20+a*10} C50 ${20+a*10} 50 ${20+b*10} 90 ${20+b*10}"/>`).join('')}
+      </svg>`
+    },
+    {
       path: 'var/',
       job: 'fleeca',
       name: 'VAR (Order)',
