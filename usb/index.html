@@ -11,6 +11,8 @@
 <style>
   :root{--w:960px;--g:#3cf07c;--g2:#9ff5bf;--gd:#1f7a3f;--text:#dcdcdc;--muted:#8b8b8b;--yel:#d9e46a;--red:#ff4d5e}
   *{box-sizing:border-box}
+  /* settings are locked to the in-game values: only the rules are shown */
+  .settings > :not(.rules):not(.keys){display:none !important}
   html{background:#08090b}
   html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   body{background:radial-gradient(ellipse at 50% 30%,#18201a 0%,#0c0e0c 65%,#080907 100%) fixed}
@@ -193,7 +195,7 @@
   </div>
 
   <details>
-    <summary>Practice settings &amp; rules</summary>
+    <summary>How to play</summary>
     <div class="settings">
       <label><span>Fragments per ring <b id="vFrags"></b></span><input id="sFrags" type="range" min="2" max="7" step="1"></label>
       <label><span>Time for the rings <b id="vTime"></b></span><input id="sTime" type="range" min="30" max="240" step="10"></label>
@@ -228,7 +230,7 @@
     get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  let cfg = Object.assign({}, DEFAULTS, store.get('usb.cfg', {}));
+  let cfg = Object.assign({}, DEFAULTS);   // locked to the in-game values (settings panel hidden)
   let stats = store.get('usb.stats', {});
   const $ = id => document.getElementById(id);
 

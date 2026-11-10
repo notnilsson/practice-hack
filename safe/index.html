@@ -11,6 +11,8 @@
 <style>
   :root{--size:568px;--text:#dcdcdc;--muted:#8b8b8b;--orange:#f0a818;--red:#ff3b30}
   *{box-sizing:border-box}
+  /* settings are locked to the in-game values: only the rules are shown */
+  .settings > :not(.rules):not(.keys){display:none !important}
   .topbar{width:var(--size);display:flex}
   .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
     background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
@@ -86,7 +88,7 @@
   </div>
 
   <details>
-    <summary>Practice settings &amp; rules</summary>
+    <summary>How to play</summary>
     <div class="settings">
       <label><span>Ball speed <b id="vSpeed"></b></span><input id="sSpeed" type="range" min="0.5" max="2" step="0.05"></label>
       <label><span>Correct balls per phase <b id="vPer"></b></span><input id="sPer" type="range" min="6" max="40" step="1"></label>
@@ -97,7 +99,7 @@
       <div class="rules">
         <b>How to play:</b> balls drop toward the gate (the two red balls at the bottom).
         <b>Hold left click</b> (anywhere on the board) or <b>hold Space</b> to open the gate and let <b>orange</b> balls through;
-        <b>let go</b> to close it so <b>red</b> balls are blocked. Each correct ball fills the bar; fill it to clear the phase. There are 3 phases and the speed stays the same. Like in-game, letting a red ball in or blocking an orange one <b>fails the hack instantly</b> (turn that off below to practise with a progress penalty instead).
+        <b>let go</b> to close it so <b>red</b> balls are blocked. Each correct ball fills the bar; fill it to clear the phase. There are 3 phases and the speed stays the same. Like in-game, letting a red ball in or blocking an orange one <b>fails the hack instantly</b>.
         The gate takes ~0.2s to open, so start holding just before an orange ball arrives.
         Keys: R = restart, Enter = start.
       </div>
@@ -121,7 +123,7 @@
     get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  let cfg = Object.assign({}, DEFAULTS, store.get('safe.cfg.v2', {}));
+  let cfg = Object.assign({}, DEFAULTS);   // locked to the in-game values (settings panel hidden)
   let stats = store.get('safe.stats', {});
   const $ = id => document.getElementById(id);
   const cv = $('cv'), ctx = cv.getContext('2d');

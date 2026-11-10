@@ -11,6 +11,8 @@
 <style>
   :root{--w:640px;--text:#dcdcdc;--muted:#8b8b8b;--orange:#ffab00;--yellow:#ffd21f;--green:#2fd27a;--red:#ff3b4e}
   *{box-sizing:border-box}
+  /* settings are locked to the in-game values: only the rules are shown */
+  .settings > :not(.rules):not(.keys){display:none !important}
   html{background:#08090b}
   html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
   body{background:radial-gradient(ellipse at 50% 30%,#1d1c1a 0%,#0d0d0c 65%,#080807 100%) fixed}
@@ -120,7 +122,7 @@
   </div>
 
   <details>
-    <summary>Practice settings &amp; rules</summary>
+    <summary>How to play</summary>
     <div class="settings">
       <label><span>Grid size <b id="vN"></b></span><input id="sN" type="range" min="4" max="9" step="1"></label>
       <label><span>Squares to remember <b id="vK"></b></span><input id="sK" type="range" min="3" max="16" step="1"></label>
@@ -131,7 +133,7 @@
       <div class="rules">
         <b>How to play:</b> during <b>Watch the pattern</b> the orange squares keep jumping around — only the <b>final</b> arrangement counts.
         It freezes and glows yellow (<b>Memorize the squares</b>), fades out, then you left-click every square that was lit.
-        Defaults match the clip: 7×7 grid, 7 squares, ~2.4s shuffle, ~1.1s to memorize, 35s to select.
+        Matches the clip: 7×7 grid, 7 squares, ~2.4s shuffle, ~1.1s to memorize, 35s to select.
         Tip: squares that stop moving early are usually part of the final pattern.
         Keys: R = restart, Enter = start.
       </div>
@@ -149,7 +151,7 @@
     get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  let cfg = Object.assign({}, DEFAULTS, store.get('therm.cfg', {}));
+  let cfg = Object.assign({}, DEFAULTS);   // locked to the in-game values (settings panel hidden)
   let stats = store.get('therm.stats', {});
   const $ = id => document.getElementById(id);
   const gridEl = $('grid');

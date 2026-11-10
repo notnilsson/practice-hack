@@ -18,6 +18,8 @@
     --line:#2b2b2b;
   }
   *{box-sizing:border-box}
+  /* settings are locked to the in-game values: only the rules are shown */
+  .settings > :not(.rules):not(.keys){display:none !important}
   .topbar{width:var(--size);display:flex}
   .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
     background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
@@ -98,7 +100,7 @@
   </div>
 
   <details id="det">
-    <summary>Practice settings</summary>
+    <summary>How to play</summary>
     <div class="settings">
       <label>Grid size
         <select id="sN">
@@ -114,7 +116,7 @@
       <label><span>Light radius <b id="vLight"></b></span><input id="sLight" type="range" min="1.5" max="6" step="0.25"></label>
       <label class="check"><input id="sRand" type="checkbox"> Random start corner (off = always top-right, like the clip)</label>
       <label class="check"><input id="sReveal" type="checkbox"> Show the whole maze (learning mode)</label>
-      <div class="keys">Keys: R = new maze · T = retry same maze. Timer starts when you first grab the ball. Settings changes start a new maze.</div>
+      <div class="keys">Grab the ball and drag it through the maze to the exit in one of the other corners. You only see the walls near the ball. Hitting a wall costs 5 seconds.<br>Keys: R = new maze · T = retry same maze. The timer starts when you first grab the ball.</div>
     </div>
   </details>
 </main>
@@ -124,13 +126,13 @@
 (() => {
   const LOGICAL = 570, PAD = 3, WALL_T = 3;
   const HIT_COOLDOWN = 700, FLASH_MS = 300;
-  const DEFAULTS = {n:15, time:50, penalty:5, light:3.5, rand:true, reveal:false};
+  const DEFAULTS = {n:15, time:50, penalty:5, light:3.5, rand:false, reveal:false};   // clip: start top-right
 
   const store = {
     get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
     set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
   };
-  let cfg = Object.assign({}, DEFAULTS, store.get('maze.cfg', {}));
+  let cfg = Object.assign({}, DEFAULTS);   // locked to the in-game values (settings panel hidden)
   let stats = store.get('maze.stats', {});
 
   const $ = id => document.getElementById(id);
