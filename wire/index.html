@@ -59,9 +59,9 @@
   .badge{transition:opacity .35s}
   .field:not(.memorising) .badge{opacity:0}
   .badge circle{fill:#0b0b0b;stroke-width:3}
-  .badge text{fill:#fff;font-weight:800;font-size:19px;text-anchor:middle;font-family:Orbitron,"Segoe UI",sans-serif}
+  .badge text{fill:#fff;font-weight:800;font-size:22px;text-anchor:middle;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
   .snip{fill:#0c0c0c;stroke:#888;stroke-width:1.5}
-  .sniptxt{fill:#ddd;font-weight:800;font-size:11px;text-anchor:middle;font-family:Orbitron,"Segoe UI",sans-serif;pointer-events:none}
+  .sniptxt{fill:#ddd;font-weight:800;font-size:11px;text-anchor:middle;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;pointer-events:none}
   .result{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:calc(var(--fs) * 10);background:#0b0b0b}
   .result.show{display:flex}
   .result.peek{background:rgba(8,8,8,.5)}
@@ -188,7 +188,7 @@
     for (const w of wires){
       w.badge = mk('g', {class: 'badge'});
       mk('circle', {cx: 500, cy: rowY(w.row) + 4, r: 19, stroke: w.color}, w.badge);
-      mk('text', {x: 500, y: rowY(w.row) + 11}, w.badge).textContent = w.n;
+      mk('text', {x: 500, y: rowY(w.row) + 12}, w.badge).textContent = w.n;
     }
     for (const w of wires){
       w.hit = mk('path', {class: 'hitw', d: pathFor(w, 0)});
