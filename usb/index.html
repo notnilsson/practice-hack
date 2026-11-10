@@ -742,8 +742,8 @@
       if (Math.random() < 0.25) tower(cx, cz, B - rnd(0, 1.5), B - rnd(0, 1.5));                 // one massive tower
       else for (const ox of [-1, 1]) for (const oz of [-1, 1]) tower(cx + ox * B / 4, cz + oz * B / 4, B / 2 - rnd(0.4, 1.6), B / 2 - rnd(0.4, 1.6));
       const beamY = () => (Math.random() < .5 ? -1 : 1) * rnd(18, 44);
-      if (Math.random() < 0.22) items.push({bx: i * P, y: beamY(), bz: cz + rnd(-6, 6), sx: WS + 1.5, sy: rnd(1.5, 3.2), sz: rnd(2, 4)});   // beams across the streets
-      if (Math.random() < 0.22) items.push({bx: cx + rnd(-6, 6), y: beamY(), bz: j * P, sx: rnd(2, 4), sy: rnd(1.5, 3.2), sz: WS + 1.5});
+      if (Math.random() < 0.22) items.push({beam: 1, vis: 1, bx: i * P, y: beamY(), bz: cz + rnd(-6, 6), sx: WS + 1.5, sy: rnd(1.5, 3.2), sz: rnd(2, 4)});   // beams across the streets
+      if (Math.random() < 0.22) items.push({beam: 1, vis: 1, bx: cx + rnd(-6, 6), y: beamY(), bz: j * P, sx: rnd(2, 4), sy: rnd(1.5, 3.2), sz: WS + 1.5});
     }
     const geo = new THREE.BoxGeometry(1, 1, 1);
     geo.setAttribute('aSeed', new THREE.InstancedBufferAttribute(Float32Array.from(items, () => Math.random() * 100), 1));
@@ -751,10 +751,11 @@
     mesh.frustumCulled = false; mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     scene.add(mesh);
     const arr = mesh.instanceMatrix.array;
-    function write(camX, camZ){
+    function write(camX, camZ, dt){
       for (let i = 0; i < items.length; i++){
         const it = items[i], o = i * 16;
-        arr[o] = it.sx; arr[o + 5] = it.sy; arr[o + 10] = it.sz; arr[o + 15] = 1; arr[o + 13] = it.y;
+        if (it.beam) it.vis += ((it.hid ? 0 : 1) - it.vis) * Math.min(1, dt * 3);     // beams near a manhole fold away
+        arr[o] = it.sx; arr[o + 5] = it.beam ? it.sy * it.vis : it.sy; arr[o + 10] = it.sz; arr[o + 15] = 1; arr[o + 13] = it.y;
         arr[o + 12] = it.bx + F * Math.round((camX - it.bx) / F);
         arr[o + 14] = it.bz + F * Math.round((camZ - it.bz) / F);
       }
@@ -786,7 +787,7 @@
           path.x += f[0] * step; path.z += f[1] * step; path.rem -= step; dist -= step;
           if (!path.decided && path.rem <= D + 1e-9){
             path.decided = true;
-            if (t >= NO_TURN_START && t - path.lastTurn >= NO_TURN_AFTER && Math.random() < 0.35){
+            if (!path.noTurn && t >= NO_TURN_START && t - path.lastTurn >= NO_TURN_AFTER && Math.random() < 0.35){
               const sgn = Math.random() < 0.5 ? -1 : 1, f2 = fwd(a + sgn * HALF);
               path.turn = {a0: a, s: sgn, u: 0, ex: path.x + D * f[0] + D * f2[0], ez: path.z + D * f[1] + D * f2[1]};
             }
@@ -798,23 +799,218 @@
         if (path.z > F) path.z -= F; else if (path.z < -F) path.z += F;
       }
     }
+
+    // ---------- the sewer ----------
+    // Street level is a ground plane at GY with an open manhole. Under every street runs a round tunnel
+    // (same grid as the streets, so the normal flight path and its turns keep working underground).
+    // Now and then the camera pitches down, drops through a manhole, flies the tunnels for a while,
+    // then climbs out of another manhole further on.
+    const GY = -90, YC = -106, TR = 7, HR = 3.2, YT = YC - 1.5, YW = YC - 4.5, V3 = GY - 6 - YT;
+    const holes = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0)];        // x, z, open?  (0 = way in, 1 = way out)
+    const U = {uTime: mat.uniforms.uTime, uAtlas: mat.uniforms.uAtlas, uHole: {value: holes}};
+    const VS = `varying vec3 vW;
+      void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+    const FS = `precision highp float;
+      uniform float uTime; uniform sampler2D uAtlas; uniform vec3 uHole[2]; uniform float uMode;
+      varying vec3 vW;
+      #define vDist length(vW - cameraPosition)
+      const float P = ${P}.0, FF = ${F}.0, TR = ${TR}.0, YC = ${YC}.0, HR = ${HR}, GY = ${GY}.0, YW = ${YW};
+      float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+      float off(float v){ return v - P * floor(v / P + 0.5); }
+      float holeD(vec3 h){ vec2 d = vW.xz - h.xy; d -= FF * floor(d / FF + 0.5); return h.z > 0.5 ? length(d) : 999.0; }
+      float glyph(vec2 cell, vec2 f, float seed){
+        float gi = floor(hash(cell + seed + floor(uTime * (1.5 + hash(cell.yx + 2.0) * 4.0)) * 0.61) * 64.0);
+        return texture2D(uAtlas, (vec2(mod(gi, 8.0), floor(gi / 8.0)) + f) / 8.0).r;
+      }
+      vec3 fogged(vec3 col, float k, vec3 fc){ return mix(col, fc, 1.0 - exp(-vDist * vDist * k)); }`;
+    const WALL = FS + `
+      void main(){
+        float along, down, seed, hd = min(holeD(uHole[0]), holeD(uHole[1]));
+        if (uMode < 1.5){                                             // tunnel (0 = runs along z, 1 = along x)
+          float ax = uMode < 0.5 ? vW.z : vW.x, ac = uMode < 0.5 ? off(vW.x) : off(vW.z);
+          if (length(vec2(off(ax), vW.y - YC)) < TR - 0.01) discard;  // opens into the crossing tunnel
+          if (vW.y > YC && hd < HR) discard;                          // the shaft comes in through the roof
+          along = ax; down = abs(atan(ac, vW.y - YC)) * TR; seed = uMode * 31.0 + (ac > 0.0 ? 5.0 : 0.0);
+        } else {                                                      // manhole shaft (2 = way in, 3 = way out)
+          if (length(vec2(off(vW.x), vW.y - YC)) < TR || length(vec2(off(vW.z), vW.y - YC)) < TR) discard;
+          vec3 h = uMode < 2.5 ? uHole[0] : uHole[1];
+          vec2 d = vW.xz - h.xy; d -= FF * floor(d / FF + 0.5);
+          along = atan(d.x, d.y) * HR; down = GY - vW.y; seed = 77.0;
+        }
+        vec2 q = vec2(along, down) / 1.1, cell = floor(q), f = fract(q);
+        float r = hash(vec2(cell.x, seed));
+        float speed = 3.0 + r * 7.0, span = 14.0 + hash(vec2(cell.x, seed + 7.0)) * 22.0;
+        float dd = mod(floor(uTime * speed) + r * span - cell.y, span);          // code runs down the walls
+        float trail = clamp(1.0 - dd / (span * 0.85), 0.0, 1.0); trail *= trail;
+        float head = step(dd, 0.5);
+        float g = glyph(cell, vec2(f.x, 1.0 - f.y), seed);
+        float live = step(0.3, hash(vec2(cell.x * 1.7, seed + 3.0)));
+        float grime = 0.35 + 0.65 * hash(floor(q * vec2(0.21, 0.4)) + seed);
+        vec3 col = mix(vec3(0.08, 1.0, 0.36), vec3(0.9, 1.0, 0.93), head) * g * (0.07 + trail * 1.3 + head * 1.3) * (0.12 + 0.88 * live) * grime;
+        col += vec3(0.0, 0.035, 0.014) * grime;
+        if (uMode < 1.5){
+          float rb = abs(fract(along / 10.0) - 0.5) * 10.0;                      // brick ribs
+          col *= 0.3 + 0.7 * smoothstep(0.3, 0.7, rb);
+          col += vec3(0.04, 0.42, 0.17) * smoothstep(0.75, 0.3, rb) * 0.3;
+          col += vec3(0.03, 0.4, 0.16) * smoothstep(YW + 3.5, YW, vW.y) * 0.45;  // glow off the water
+          col += vec3(0.1, 0.5, 0.24) * exp(-hd * hd / 90.0) * (0.4 + 0.6 * grime) * 0.6;   // light falling in from a manhole
+        } else {
+          col *= 0.45 + 0.55 * step(0.12, fract(down / 2.5));                    // ring joints
+          col += vec3(0.3, 0.95, 0.55) * step(abs(along), 0.9) * step(fract(down / 1.3), 0.16) * 0.7;   // ladder rungs
+          col += vec3(0.05, 0.3, 0.14) * smoothstep(4.0, 0.0, down);
+        }
+        gl_FragColor = vec4(fogged(col, 0.00022, vec3(0.0, 0.04, 0.016)), 1.0);
+      }`;
+    const WATER = FS + `
+      void main(){
+        vec2 p = vW.xz;
+        float n = sin(p.x * 0.9 + sin(p.y * 0.7 + uTime * 1.3) * 1.6 + uTime * 0.8) * sin(p.y * 0.8 + sin(p.x * 0.6 - uTime * 1.1) * 1.6 - uTime * 0.6);
+        vec3 col = vec3(0.01, 0.13, 0.05) * (0.55 + 0.45 * n) + vec3(0.05, 0.5, 0.2) * pow(max(n, 0.0), 6.0) * 0.5;
+        vec2 q = p / 1.5, cell = floor(q);
+        col += vec3(0.1, 0.9, 0.4) * glyph(cell, fract(q), 9.0) * step(0.86, hash(cell + 3.0)) * (0.3 + 0.3 * sin(uTime * 2.0 + hash(cell) * 6.28));
+        float hd = min(holeD(uHole[0]), holeD(uHole[1]));
+        col += vec3(0.25, 0.9, 0.5) * exp(-hd * hd / 14.0) * 0.5;
+        gl_FragColor = vec4(fogged(col, 0.00022, vec3(0.0, 0.04, 0.016)), 1.0);
+      }`;
+    const GROUND = FS + `
+      uniform vec3 uFog;
+      void main(){
+        float hd = min(holeD(uHole[0]), holeD(uHole[1]));
+        if (hd < HR) discard;                                                    // the open manhole
+        float sx = abs(off(vW.x)), sz = abs(off(vW.z)), e = min(sx, sz);
+        vec3 col = vec3(0.0, 0.022, 0.009);
+        if (e < 7.0){                                                            // street
+          vec2 q = vW.xz / 1.6, cell = floor(q);
+          col += vec3(0.05, 0.6, 0.25) * glyph(cell, fract(q), 4.0) * step(0.8, hash(cell + 1.0)) * 0.35;
+          col += vec3(0.05, 0.5, 0.2) * smoothstep(0.5, 0.0, 7.0 - e) * 0.5;      // kerbs
+          float lane = sx < sz ? vW.z : vW.x;
+          col += vec3(0.05, 0.45, 0.18) * step(e, 0.22) * step(fract(lane / 6.0), 0.5) * step(7.0, max(sx, sz)) * 0.6;
+        }
+        col += vec3(0.25, 1.0, 0.5) * smoothstep(HR + 0.7, HR, hd) * 1.1;         // glowing rim
+        col += vec3(0.05, 0.4, 0.17) * exp(-(hd - HR) * 0.22) * 0.5;
+        gl_FragColor = vec4(fogged(col, 0.000045, uFog), 1.0);
+      }`;
+    const sm = (fs, mode, side, extra) => new THREE.ShaderMaterial({uniforms: Object.assign({uMode: {value: mode}}, U, extra || {}), vertexShader: VS, fragmentShader: fs, side: side || THREE.FrontSide});
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400).rotateX(-Math.PI / 2), sm(GROUND, 0, THREE.FrontSide, {uFog: mat.uniforms.uFog}));
+    ground.position.y = GY; ground.frustumCulled = false; ground.renderOrder = 1; scene.add(ground);
+    const under = new THREE.Group(); under.renderOrder = 2; scene.add(under);
+    const tubes = new THREE.Group(); under.add(tubes);
+    { const g0 = new THREE.CylinderGeometry(TR, TR, 420, 28, 1, false), gz = g0.clone().rotateX(Math.PI / 2), gx = g0.clone().rotateZ(Math.PI / 2);
+      const mz = sm(WALL, 0, THREE.BackSide), mxm = sm(WALL, 1, THREE.BackSide);
+      for (let i = -4; i <= 4; i++){
+        const a = new THREE.Mesh(gz, mz), b = new THREE.Mesh(gx, mxm);
+        a.position.set(i * P, YC, 0); b.position.set(0, YC, i * P);
+        a.frustumCulled = b.frustumCulled = false; a.renderOrder = b.renderOrder = 2; tubes.add(a, b);
+      } }
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(520, 520).rotateX(-Math.PI / 2), sm(WATER, 0));
+    water.position.y = YW; water.frustumCulled = false; water.renderOrder = 2; under.add(water);
+    const lidTex = (() => { const k = document.createElement('canvas'); k.width = k.height = 128; const g = k.getContext('2d');
+      g.fillStyle = '#04140a'; g.fillRect(0, 0, 128, 128); g.strokeStyle = '#1f8a49'; g.lineWidth = 3;
+      for (const r of [60, 44, 28]){ g.beginPath(); g.arc(64, 64, r, 0, 7); g.stroke(); }
+      g.lineWidth = 2; for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2; g.beginPath(); g.moveTo(64 + Math.cos(a) * 12, 64 + Math.sin(a) * 12); g.lineTo(64 + Math.cos(a) * 58, 64 + Math.sin(a) * 58); g.stroke(); }
+      return new THREE.CanvasTexture(k); })();
+    const shafts = [0, 1].map(k => {
+      const g = new THREE.Group(); g.visible = false; g.position.y = GY;
+      const wall = new THREE.Mesh(new THREE.CylinderGeometry(HR, HR, 11, 24, 1, true), sm(WALL, 2 + k, THREE.BackSide)); wall.position.y = -5.5;
+      const light = new THREE.Mesh(new THREE.CylinderGeometry(HR * 0.95, HR * 1.5, GY - YW, 24, 1, true),
+        new THREE.MeshBasicMaterial({color: 0x39e37a, transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide}));
+      light.position.y = -(GY - YW) / 2; light.renderOrder = 3;
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(HR + 0.25, HR + 0.25, 0.3, 28), new THREE.MeshBasicMaterial({map: lidTex, color: 0x9fd9b4}));
+      for (const m of [wall, light, lid]) m.frustumCulled = false;
+      wall.renderOrder = 2; g.add(wall, light, lid); g.userData.lid = lid; scene.add(g); return g;
+    });
+
+    // vertical-plane flight profiles: a list of [length, pitch at start, pitch at end] pieces, pitch eased inside each piece
+    function profile(segs, y0, speed){
+      const pts = [], ends = []; let l = 0, h = 0, y = y0;
+      segs.forEach(([len, a0, a1], si) => {
+        const n = Math.max(1, Math.round(len / 0.1)), ds = len / n;
+        for (let i = 0; i < n; i++){
+          pts.push({l, h, y, th: a0 + (a1 - a0) * ease(i / n), seg: si});
+          const th = a0 + (a1 - a0) * ease((i + 0.5) / n);
+          h += Math.cos(th) * ds; y += Math.sin(th) * ds; l += ds;
+        }
+        ends.push({l, h});
+      });
+      pts.push({l, h, y, th: segs[segs.length - 1][2], seg: segs.length - 1});
+      return {pts, ends, len: l, speed};
+    }
+    const sew = {mode: 'city', next: 16, until: 0, prof: null, l: 0, i: 0, h: 0, v: 26, wob: 1, swk: 1, lastY: 0};
+    const wrapF = d => d - F * Math.round(d / F);
+    function openHole(k, dist){
+      const a = path.d * HALF, f = fwd(a), r = rgt(a), hx = path.x + f[0] * dist, hz = path.z + f[1] * dist;
+      holes[k].set(hx, hz, 1);
+      const g = shafts[k]; g.visible = true; g.userData.x = hx; g.userData.z = hz;
+      g.userData.lid.position.set(f[0] * 7.6 + r[0] * 0.9, 0.16, f[1] * 7.6 + r[1] * 0.9);
+      for (const it of items) if (it.beam && Math.abs(wrapF(it.bx - hx)) < 80 && Math.abs(wrapF(it.bz - hz)) < 80) it.hid = true;
+    }
+    function startDive(){
+      // pitch down in a long arc that ends pointing straight down over a manhole in the middle of a block
+      const h1 = (((path.rem - P / 2 - 35) % P) + P) % P + 35, L2 = -YT - h1 - V3;
+      sew.prof = profile([[h1 / kk, 0, -HALF], [L2, -HALF, -HALF], [V3 / kk, -HALF, 0]], 0,
+        (seg, left) => seg === 0 ? 30 : seg === 1 ? (left < 12 ? 17 : 38) : 16);
+      for (const it of items) it.hid = false;
+      openHole(0, sew.prof.ends[0].h);
+      path.noTurn = true; sew.mode = 'dive'; sew.l = sew.i = sew.h = 0;
+    }
+    function startRise(){
+      // a manhole at least 120 ahead: level run-in, pull up into the shaft, straight up, then over into level flight
+      const lead = (((path.rem - P / 2 - V3 - 110) % P) + P) % P + 110, h4 = 45;
+      sew.prof = profile([[lead, 0, 0], [V3 / kk, 0, HALF], [-YT - V3 - h4, HALF, HALF], [h4 / kk, HALF, 0]], YT,
+        (seg, left) => seg === 0 ? (left < 18 ? 18 : 30) : seg === 1 ? 16 : seg === 2 ? 34 : 27);
+      openHole(1, sew.prof.ends[1].h);
+      path.noTurn = true; sew.mode = 'rise'; sew.l = sew.i = sew.h = 0;
+    }
     const bell = x => 16 * x * x * (1 - x) * (1 - x);               // 0 at both ends of a turn, 1 in the middle (same shape as the turn rate)
     cam.rotation.order = 'YXZ';
     return {
       size(){ renderer.setSize(window.innerWidth, window.innerHeight, false); cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix(); },
       render(t, dt, mx, my, dry){
+        let ev = null, pitch = 0, baseY = 0;
         const lean0 = path.turn ? bell(path.turn.u / LT) : 0;
-        advance((26 + 70 * Math.exp(-t * 1.1)) * (1 - 0.5 * lean0) * dt, t);     // bursts in fast, cruises, slows through turns
+        if (sew.mode === 'city' || sew.mode === 'sewer'){
+          const below = sew.mode === 'sewer';
+          const target = (below ? 30 : 26 + 70 * Math.exp(-t * 1.1)) * (1 - 0.5 * lean0);   // bursts in fast, cruises, slows through turns
+          sew.v = below ? sew.v + (target - sew.v) * Math.min(1, dt * 2) : target;
+          advance(sew.v * dt, t);
+          baseY = below ? YT : 0;
+          if (!path.turn){ if (!below && t >= sew.next) startDive(); else if (below && t >= sew.until) startRise(); }
+        } else {                                                    // diving into / climbing out of a manhole
+          const pr = sew.prof;
+          sew.l = Math.min(pr.len, sew.l + sew.v * dt);
+          while (sew.i < pr.pts.length - 2 && pr.pts[sew.i + 1].l <= sew.l) sew.i++;
+          const A = pr.pts[sew.i], B = pr.pts[sew.i + 1], k = B.l > A.l ? Math.min(1, (sew.l - A.l) / (B.l - A.l)) : 0;
+          const h = A.h + (B.h - A.h) * k;
+          baseY = A.y + (B.y - A.y) * k; pitch = A.th + (B.th - A.th) * k;
+          advance(Math.max(0, h - sew.h), t); sew.h = h;
+          sew.v += (pr.speed(A.seg, pr.ends[A.seg].l - sew.l) - sew.v) * Math.min(1, dt * 2.5);
+          if ((sew.lastY > GY) !== (baseY > GY)) ev = baseY < GY ? 'plunge' : 'surface';
+          if (sew.l >= pr.len){
+            path.noTurn = false;
+            if (sew.mode === 'dive'){ sew.mode = 'sewer'; sew.until = t + rnd(13, 18); }
+            else { sew.mode = 'city'; sew.next = t + rnd(24, 34); }
+          }
+        }
+        sew.lastY = baseY;
+        // free wobble / sway: full in the city, small in the tunnels, none while threading a manhole
+        const wT = sew.mode === 'city' ? 1 : sew.mode === 'sewer' ? 0.1 : 0, sT = sew.mode === 'city' ? 1 : sew.mode === 'sewer' ? 0.4 : 0;
+        sew.wob += (wT - sew.wob) * Math.min(1, dt * (wT > sew.wob ? 0.8 : 2.2));
+        sew.swk += (sT - sew.swk) * Math.min(1, dt * (sT > sew.swk ? 0.8 : 2.2));
         const T = path.turn, x = T ? T.u / LT : 0, sgn = T ? T.s : 0, lean = T ? bell(x) : 0;
         const a = T ? T.a0 + T.s * HALF * ease(x) : path.d * HALF;
-        const r = rgt(a), sway = (Math.sin(t * 0.37) * 2.6 + (mx - 0.5) * 3) * (1 - 0.85 * lean);
-        cam.position.set(path.x + r[0] * sway, Math.sin(t * 0.23) * 6 + (0.5 - my) * 5, path.z + r[1] * sway);
+        const r = rgt(a), sway = (Math.sin(t * 0.37) * 2.6 + (mx - 0.5) * 3) * (1 - 0.85 * lean) * sew.swk;
+        cam.position.set(path.x + r[0] * sway, baseY + (Math.sin(t * 0.23) * 6 + (0.5 - my) * 5) * sew.wob, path.z + r[1] * sway);
         cam.rotation.y = -(a + sgn * 0.12 * lean) + Math.sin(t * 0.19) * 0.06 - (mx - 0.5) * 0.25;   // looks slightly into the turn
-        cam.rotation.x = Math.sin(t * 0.27) * 0.05 + (0.5 - my) * 0.12;
+        cam.rotation.x = pitch + Math.sin(t * 0.27) * 0.05 + (0.5 - my) * 0.12;
         cam.rotation.z = -sgn * 0.32 * lean - Math.cos(t * 0.37) * 0.07;                              // banks into the turn
-        write(cam.position.x, cam.position.z);
+        const cx = cam.position.x, cz = cam.position.z;
+        write(cx, cz, dt);
+        ground.position.set(cx, GY, cz); water.position.set(cx, YW, cz);
+        tubes.position.set(Math.round(cx / P) * P, 0, Math.round(cz / P) * P);
+        for (const g of shafts) if (g.visible){ g.position.x = g.userData.x + F * Math.round((cx - g.userData.x) / F); g.position.z = g.userData.z + F * Math.round((cz - g.userData.z) / F); }
         mat.uniforms.uTime.value = t;
         if (!dry) renderer.render(scene, cam);
+        return ev;
       },
       debug(){   // for testing: nearest wall to the camera
         let clear = 1e9; const c = cam.position;
@@ -823,9 +1019,11 @@
           const dx = Math.max(0, Math.abs(c.x - arr[o + 12]) - arr[o] / 2), dz = Math.max(0, Math.abs(c.z - arr[o + 14]) - arr[o + 10] / 2);
           clear = Math.min(clear, Math.hypot(dx, dz));
         }
-        return {x: path.x, z: path.z, d: path.d, turning: !!path.turn, n: items.length, clear, yaw: cam.rotation.y, roll: cam.rotation.z};
+        const off = v => v - P * Math.round(v / P), cy = c.y - YC, hole = Math.min(...shafts.filter(g => g.visible).map(g => Math.hypot(c.x - g.position.x, c.z - g.position.z)), 1e9);
+        const sclear = c.y > GY ? 1e9 : c.y > YC + Math.sqrt(TR * TR - HR * HR) ? HR - hole : Math.max(TR - Math.hypot(off(c.x), cy), TR - Math.hypot(off(c.z), cy), c.y > YC ? HR - hole : -1e9);
+        return {x: path.x, z: path.z, d: path.d, turning: !!path.turn, n: items.length, clear, sclear, mode: sew.mode, y: c.y, pitch: cam.rotation.x, sew, yaw: cam.rotation.y, roll: cam.rotation.z};
       },
-      dispose(){ try{ geo.dispose(); mat.dispose(); atlas.dispose(); renderer.dispose(); renderer.forceContextLoss(); }catch(e){} renderer.domElement.remove(); }
+      dispose(){ try{ scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }); lidTex.dispose(); geo.dispose(); mat.dispose(); atlas.dispose(); renderer.dispose(); renderer.forceContextLoss(); }catch(e){} renderer.domElement.remove(); }
     };
   }
 
@@ -990,7 +1188,7 @@
         requestAnimationFrame(frame); return;
       }
       c.setTransform(1, 0, 0, 1, 0, 0);
-      if (city){ city.render(t, dt, mx, my); c.clearRect(0, 0, W, H); }      // rain and eye are drawn over the 3D city
+      if (city){ const ev = city.render(t, dt, mx, my); if (ev) SFX.play(ev === 'plunge' ? 'thud' : 'glitch'); c.clearRect(0, 0, W, H); }      // rain and eye are drawn over the 3D city
       else { c.fillStyle = '#000'; c.fillRect(0, 0, W, H); }
       // camera: slow roll + parallax from the mouse
       const camX = (mx - 0.5) * 0.35 + Math.sin(t * 0.31) * 0.06, camY = (my - 0.5) * 0.2, f = H * 0.6;
