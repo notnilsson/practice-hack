@@ -173,6 +173,16 @@
         ${[[20,30,'H'],[62,30,'6'],[34,62,'F']].map(([x,y,c],i)=>`<rect x="${x}" y="${y}" width="16" height="16" rx="2" fill="${i===1?'rgba(225,40,50,.85)':'rgba(70,14,18,.55)'}" stroke="${i===1?'#ff6670':'#c42630'}"/><text x="${x+8}" y="${y+11.5}" fill="#f4f4f4">${c}</text>`).join('')}
       </svg>`
     },
+    {
+      path: 'vsafe/',
+      job: 'vangelico',
+      name: 'Back Safe',
+      desc: 'Memory match: flip two squares at a time and find all 8 icon pairs. Two phases, no fail state – just beat your time.',
+      tags: ['Mouse', '2 phases', 'No fail'],
+      thumb: `<svg viewBox="0 0 100 100" font-family="Segoe UI,system-ui,sans-serif" font-weight="700" font-size="9" text-anchor="middle">
+        ${Array.from({length:16},(_,i)=>{const x=14+(i%4)*19,y=14+(i/4|0)*19,k=[0,5,10,3].indexOf(i)>=0?'#b8262d':i===6?'#f0554a':'#3b3b3d';return `<rect x="${x}" y="${y}" width="16" height="16" rx="2" fill="${k}"/>`+(k==='#3b3b3d'?`<text x="${x+8}" y="${y+11.3}" fill="#b9b9bb">?</text>`:'')}).join('')}
+      </svg>`
+    },
   ];
 
   function card(g){

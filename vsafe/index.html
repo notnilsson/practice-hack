@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<meta name="theme-color" content="#0e1014">
+<title>Back Safe – Vangelico Practice</title>
+<style>
+  :root{--size:568px;--text:#dcdcdc;--muted:#8b8b8b;--red:#f0333d;--pink:#ff7f7f;--green:#3fd27a}
+  *{box-sizing:border-box}
+  html{background:#08090b}
+  html,body{margin:0;min-height:100%;color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  body{background:radial-gradient(ellipse at 50% 30%,#1f1c1c 0%,#0e0d0d 65%,#080707 100%) fixed}
+  main{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px 16px 28px;gap:10px}
+  .topbar{width:var(--size);display:flex}
+  .back{display:inline-flex;align-items:center;gap:8px;padding:9px 16px 9px 12px;font-size:14.5px;font-weight:600;color:#e8e8e8;text-decoration:none;
+    background:#1f2024;border:1px solid #3a3b40;border-radius:8px;box-shadow:0 1px 0 rgba(255,255,255,.04) inset;transition:background .15s,border-color .15s,color .15s}
+  .back svg{width:16px;height:16px;transition:transform .15s}
+  .back:hover{background:rgba(240,51,61,.12);border-color:var(--red);color:#fff}
+  .back:hover svg{transform:translateX(-2px)}
+  .back:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+  .hud{width:var(--size);display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  .hud b{color:var(--text);font-weight:600}
+  .board{position:relative;width:var(--size);height:var(--size);user-select:none;-webkit-user-select:none}
+  canvas{display:block;width:100%;height:100%;border:1px solid #3d3d40;border-top-color:#6a6a6d;border-radius:3px;cursor:crosshair;touch-action:none}
+  canvas.over{cursor:pointer}
+  .bars{width:var(--size);display:flex;gap:5px}
+  .bars div{flex:1;height:9px;background:#5d5b5d;border-radius:5px;overflow:hidden;position:relative}
+  .bars i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--red);border-radius:5px;transition:width .22s ease-out}
+  .bars div.lost i{background:var(--pink);width:100% !important}
+  .bars div.done i{width:100% !important}
+
+  .cards{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);gap:calc(var(--size) * .022);padding:calc(var(--size) * .026);
+    background:#151517;border:1px solid #3d3d40;border-top-color:#6a6a6d;border-radius:3px;perspective:900px}
+  .card{position:relative;cursor:pointer;transform-style:preserve-3d;transition:transform .32s ease}
+  .card.up{transform:rotateY(180deg)}
+  .card .f{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:4px;display:flex;align-items:center;justify-content:center}
+  .card .down{background:#3b3b3d;color:#b9b9bb;font:700 calc(var(--size) * .052) "Segoe UI",system-ui,sans-serif;transition:background .12s}
+  .card:hover .down{background:#4a4a4d}
+  .card .face{transform:rotateY(180deg);background:#2a1013;color:#fff;transition:background .15s}
+  .card .face svg{width:34%;height:34%}
+  .card.done .face{background:#b8262d}
+  .card.miss .face{background:#f0554a}
+  .card.done,.card.up{cursor:default}
+  .overlay.show{background:rgba(45,4,6,.55)}
+  .overlay{position:absolute;inset:0;z-index:2;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:20px}
+  .overlay.show{display:flex}
+  .box{border:1px solid #2a2a2c;border-radius:8px;background:rgba(10,10,11,.92);padding:16px 26px;font-size:17px;font-weight:600;color:#f3f3f3;font-family:"Segoe UI",system-ui,sans-serif}
+  .box.lost{border-color:#e8645e;color:#ff8a80}
+  .box.win{border-color:#2b7a4b;color:var(--green)}
+  .box.intro{border-color:#7a2a2e;color:#ffb0b0}
+  .sub{color:#b5b5b5;font-size:13px;font-variant-numeric:tabular-nums;max-width:90%}
+  .btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  button{font:inherit;font-size:13px;color:#eee;background:#2a2a2d;border:1px solid #444;border-radius:6px;padding:7px 14px;cursor:pointer}
+  button:hover{background:#353539;border-color:#555}
+  button.primary{background:#9c1f27;border-color:#e0333d;color:#fff}
+  button.primary:hover{background:#b3232c}
+
+  .row{width:var(--size);display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .stats{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums}
+  .stats b{color:var(--text);font-weight:600}
+  details{width:var(--size);border:1px solid #2b2b2b;border-radius:8px;background:rgba(20,18,18,.7)}
+  summary{cursor:pointer;padding:9px 12px;color:#bdbdbd;font-size:13px;user-select:none}
+  .rules{color:#8a8a8a;font-size:12px;line-height:1.5;padding:2px 12px 14px}
+  .rules b{color:#cfcfcf}
+</style>
+</head>
+<body>
+<main>
+  <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
+  <div class="hud">
+    <span>Phase <b id="hPhase">1/2</b> · Pairs <b id="hPairs">0/8</b></span>
+    <span>Misses <b id="hMiss">0</b> · Time <b id="hTime">0.0s</b></span>
+  </div>
+
+  <div class="board">
+    <div class="cards" id="cards"></div>
+    <div class="overlay" id="overlay">
+      <div class="box" id="oBox"></div>
+      <div class="sub" id="oSub"></div>
+      <div class="btns" id="oBtns"></div>
+    </div>
+  </div>
+
+  <div class="bars" id="bars"><div><i></i></div><div><i></i></div></div>
+
+  <div class="row">
+    <div class="stats" id="stats"></div>
+    <button id="bRestart">Restart (R)</button>
+  </div>
+
+  <details>
+    <summary>How to play</summary>
+    <div class="rules">
+      Click two squares to flip them. If the icons match they stay red; if not, they flash and flip back.
+      Match all <b>8 pairs</b> to clear a phase. There are <b>2 phases</b> and <b>no way to fail</b> – it only counts your time and misses.
+      The red bar is the phase timer from the clip (about 40 seconds). Keys: R = restart, Enter = start.
+    </div>
+  </details>
+</main>
+
+<script src="../sfx.js"></script>
+<script>
+(() => {
+  // In-game values from the clip: 4×4 grid, 8 icon pairs, 2 phases, bar = ~40s per phase, no fail state.
+  const PAIRS = 8, PHASES = 2, PHASE_TIME = 40, SHOW_MISS = 0.8;
+  const I = (d, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${d}</svg>`;
+  const ICONS = {
+    key:   I('<circle cx="7.5" cy="15.5" r="4" fill="currentColor"/><path d="M10.5 12.5L20 3M16 7l3 3M14 9l2 2"/>'),
+    lock:  I('<rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
+    open:  I('<rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V7a4 4 0 0 1 7.6-1.7"/>'),
+    eye:   I('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3" fill="currentColor"/>'),
+    noeye: I('<path d="M9.9 5.2A9.7 9.7 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-2.4 3.3M6.6 6.6A17.4 17.4 0 0 0 2 12s3.6 7 10 7a9.5 9.5 0 0 0 5.4-1.6M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+    shield:I('<path d="M12 2l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V5l8-3z"/><path d="M12 2v20c-4.6-1.7-8-6-8-11V5z" fill="currentColor"/>'),
+    print: I('<path d="M12 11v3M8.5 16c.8-1.4 1-3 1-5a2.5 2.5 0 0 1 5 0c0 2.4-.4 4.6-1.4 6.5M17 19.5c.6-1.7 1-3.7 1-6.5a6 6 0 0 0-12 0c0 1.6-.3 3-.9 4.3M5.4 5.4A9 9 0 0 1 21 12c0 .9 0 1.8-.1 2.7M3.5 15A9 9 0 0 1 3 12a8.9 8.9 0 0 1 .6-3.2M10 21c.7-1.1 1.3-2.4 1.6-3.8"/>'),
+    bolt:  I('<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" fill="currentColor"/>'),
+  };
+  const store = {
+    get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+    set(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  };
+  let stats = store.get('vsafe.stats', {runs:0, best:null, bestMiss:null});
+  const $ = id => document.getElementById(id);
+  const grid = $('cards');
+
+  let state = 'idle', phase = 0, deck = [], cards = [], open = [], matched = 0, misses = 0, busy = false, phaseStart = 0, runStart = 0, endTime = 0;
+  const now = () => performance.now() / 1000;
+
+  function deal(){
+    const names = Object.keys(ICONS);
+    deck = [...names, ...names];
+    for (let i = deck.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    grid.innerHTML = ''; cards = [];
+    deck.forEach((name, i) => {
+      const c = document.createElement('div'); c.className = 'card';
+      c.innerHTML = `<div class="f down">?</div><div class="f face">${ICONS[name]}</div>`;
+      c.addEventListener('pointerdown', e => { e.preventDefault(); flip(i); });
+      grid.appendChild(c); cards.push(c);
+    });
+    open = []; matched = 0; busy = false;
+    $('hPairs').textContent = `0/${PAIRS}`;
+  }
+
+  function flip(i){
+    if (state !== 'running' || busy) return;
+    const c = cards[i];
+    if (c.classList.contains('up') || c.classList.contains('done')) return;
+    c.classList.add('up'); open.push(i); SFX.play('click');
+    if (open.length < 2) return;
+    const [a, b] = open; open = [];
+    if (deck[a] === deck[b]){
+      busy = true;
+      setTimeout(() => {
+        cards[a].classList.add('done'); cards[b].classList.add('done'); busy = false;
+        matched++; $('hPairs').textContent = `${matched}/${PAIRS}`;
+        if (matched >= PAIRS) phaseCleared(); else SFX.play('ok');
+      }, 300);
+    } else {
+      busy = true; misses++;
+      setTimeout(() => { cards[a].classList.add('miss'); cards[b].classList.add('miss'); SFX.play('bad'); }, 300);
+      setTimeout(() => {
+        for (const k of [a, b]) cards[k].classList.remove('up');
+        setTimeout(() => { for (const k of [a, b]) cards[k].classList.remove('miss'); busy = false; }, 330);
+      }, 300 + SHOW_MISS * 1000);
+    }
+  }
+
+  const bars = [...$('bars').children];
+  function start(){
+    hideOverlay();
+    bars.forEach(b => { b.className = ''; b.querySelector('i').style.width = '0%'; });
+    phase = 0; misses = 0; endTime = 0; runStart = phaseStart = now();
+    deal(); state = 'running'; SFX.play('start');
+  }
+  function phaseCleared(){
+    bars[phase].classList.add('done');
+    if (phase + 1 >= PHASES) return win();
+    state = 'between'; SFX.play('stage');
+    showOverlay(`Phase ${phase + 1} Cleared`, '', '', []);
+    setTimeout(() => { if (state !== 'between') return; hideOverlay(); phase++; deal(); phaseStart = now(); state = 'running'; }, 1600);
+  }
+  function win(){
+    state = 'won'; endTime = now() - runStart; SFX.play('win');
+    stats.runs++;
+    const pb = stats.best == null || endTime < stats.best, pm = stats.bestMiss == null || misses < stats.bestMiss;
+    if (pb) stats.best = endTime; if (pm) stats.bestMiss = misses;
+    store.set('vsafe.stats', stats); renderStats();
+    showOverlay('All Phases Cleared', 'win', `${endTime.toFixed(1)}s · ${misses} miss${misses === 1 ? '' : 'es'}${pb ? ' · new best time!' : ''}${pm && !pb ? ' · fewest misses yet!' : ''}`);
+  }
+  function renderStats(){
+    $('stats').innerHTML = stats.runs ? `Best <b>${stats.best.toFixed(1)}s</b> · fewest misses <b>${stats.bestMiss}</b> · runs <b>${stats.runs}</b>` : 'No runs yet';
+  }
+  function showOverlay(title, kind, sub, btns){
+    $('oBox').textContent = title; $('oBox').className = 'box' + (kind ? ' ' + kind : '');
+    $('oSub').innerHTML = sub || '';
+    const b = $('oBtns'); b.innerHTML = '';
+    for (const [label, fn, primary] of (btns || [[state === 'idle' ? 'Start (Enter)' : 'Again (R)', start, true]])){
+      const e = document.createElement('button'); e.textContent = label; if (primary) e.className = 'primary'; e.onclick = ev => { ev.currentTarget.blur(); fn(); }; b.appendChild(e);
+    }
+    $('overlay').classList.add('show');
+  }
+  const hideOverlay = () => $('overlay').classList.remove('show');
+  function toIdle(){
+    state = 'idle'; deal();
+    showOverlay('Vangelico – Back Safe', 'intro', 'Flip two squares at a time and match all 8 pairs. 2 phases · no fail, just beat your time.');
+    renderStats();
+  }
+
+  function tick(){
+    if (state === 'running'){
+      const el = now() - phaseStart;
+      bars[phase].querySelector('i').style.width = Math.min(100, el / PHASE_TIME * 100) + '%';
+    }
+    const total = state === 'running' || state === 'between' ? now() - runStart : endTime;
+    $('hTime').textContent = total.toFixed(1) + 's';
+    $('hPhase').textContent = `${Math.min(phase + 1, PHASES)}/${PHASES}`;
+    $('hMiss').textContent = misses;
+    requestAnimationFrame(tick);
+  }
+
+  function resize(){
+    const s = Math.floor(Math.max(260, Math.min(780, window.innerWidth - 32, window.innerHeight - 200)));
+    document.documentElement.style.setProperty('--size', s + 'px');
+  }
+  window.addEventListener('keydown', e => {
+    if (e.key === 'r' || e.key === 'R') start();
+    else if (e.key === 'Enter' && state === 'idle') start();
+  });
+  $('bRestart').onclick = e => { e.currentTarget.blur(); start(); };
+  window.addEventListener('resize', resize);
+  resize(); toIdle(); requestAnimationFrame(tick);
+})();
+</script>
+<script src="../watch.js"></script>
+</body>
+</html>
