@@ -39,6 +39,11 @@ Practice versions of FiveM server hacking minigames, hosted with GitHub Pages.
 | Wire Cut | [`wire/`](wire/) | Memorise the cut order of 7 wires in 3s, then cut them 1→7 after they cross over. 1 phase, 10s, one wrong cut fails. |
 | VAR (Order) | [`var/`](var/) | Memorise 8 numbered squares in 3s, then click them 1→8 while they drift blank. 1 phase, 20s, one wrong click fails. |
 
+### Arcade
+| Game | Folder | Description |
+|------|--------|-------------|
+| Blind Spot | [`blindspot/`](blindspot/) | 3D stealth game in the code sewers: avoid the watchers' searchlights, hack 3 terminals, climb out. Keyboard and mouse. |
+
 ## Adding a game
 
 1. Put the game in its own folder as `index.html` (e.g. `lockpick/index.html`). Each game is a single self-contained HTML file.
