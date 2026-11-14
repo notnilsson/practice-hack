@@ -26,8 +26,15 @@
   .back:focus-visible{outline:2px solid var(--g);outline-offset:2px}
 
   /* CRT screen */
-  .screen{position:relative;width:var(--w);aspect-ratio:4/3;background:radial-gradient(ellipse at 50% 45%,#1d2a20 0%,#151d17 60%,#0e140f 100%);
-    border:10px solid #d9dccf;border-radius:14px;box-shadow:0 0 0 2px #b9bcb0,0 20px 60px rgba(0,0,0,.6);overflow:hidden;container-type:inline-size;
+  .scene{width:var(--w);perspective:calc(var(--w) * 1.5);perspective-origin:50% 0%;margin:calc(var(--w) * .012) 0 calc(var(--w) * .02)}
+  /* the beige CRT from the game: wide flat bezel, a bevel sloping in to the glass, tilted so you look down on it */
+  .monitor{position:relative;padding:6.2% 7.4% 7.6%;border-radius:calc(var(--w) * .022);transform:rotateX(-9deg) rotateZ(.5deg);transform-origin:50% 60%;transform-style:preserve-3d;
+    background:linear-gradient(178deg,#eeefe6 0%,#e2e3d9 55%,#cfd0c5 100%);
+    box-shadow:0 calc(var(--w) * .012) 0 #a9aa9f,0 calc(var(--w) * .024) 0 #8f9086,0 calc(var(--w) * .06) calc(var(--w) * .09) rgba(0,0,0,.65),inset 0 2px 0 rgba(255,255,255,.7),inset 0 -3px 6px rgba(0,0,0,.12)}
+  .monitor::after{content:"";position:absolute;right:8%;bottom:2.4%;width:1.1%;aspect-ratio:1;border-radius:50%;background:#58e08a;box-shadow:0 0 6px #58e08a}
+  .screen{position:relative;width:100%;aspect-ratio:4/3;background:radial-gradient(ellipse at 50% 45%,#1d2a20 0%,#151d17 60%,#0e140f 100%);
+    border-style:solid;border-width:calc(var(--w) * .026);border-color:#b4b5aa #c9cabf #dfe0d6 #c2c3b8;border-radius:calc(var(--w) * .012);
+    box-shadow:0 0 0 1px #9c9d92,inset 0 0 calc(var(--w) * .05) rgba(0,0,0,.75);overflow:hidden;container-type:inline-size;
     font-family:"Lucida Console","Courier New",ui-monospace,monospace;color:var(--g)}
   .screen::after{content:"";position:absolute;inset:0;pointer-events:none;
     background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply}
@@ -45,7 +52,7 @@
   .prompt span{white-space:pre}
   #cmd{flex:1;background:transparent;border:none;outline:none;color:var(--g);font:inherit;caret-color:var(--g);padding:0;text-shadow:0 0 .5cqw rgba(60,240,124,.55)}
   .status{position:absolute;left:3cqw;bottom:1.8cqw;font-size:1.1cqw;color:#5fbf80;letter-spacing:.05em}
-  #auth{display:none;align-items:center;justify-content:center;font-size:2.2cqw;letter-spacing:.12em}
+  #auth{display:none;align-items:center;justify-content:flex-start;padding:14cqw 6cqw 0;font-size:1.7cqw;line-height:1.5;letter-spacing:.1em}
   #auth.show{display:flex}
 
   /* ring phase */
@@ -61,7 +68,7 @@
   .col{border:1px solid rgba(60,240,124,.35);position:relative;padding:1.2cqw}
   .col h3{margin:0;font-size:1.2cqw;letter-spacing:.1em;font-weight:700;color:#7ff0a8}
   .fragno{text-align:center;font-size:1.35cqw;color:#e2f5e6;letter-spacing:.12em;margin-top:.4cqw}
-  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1;filter:blur(.1cqw) drop-shadow(0 0 .45cqw rgba(60,240,124,.6)) drop-shadow(0 0 1.1cqw rgba(60,240,124,.3))}
+  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1;filter:blur(.08cqw) drop-shadow(0 0 .4cqw rgba(60,240,124,.5)) drop-shadow(0 0 1cqw rgba(60,240,124,.22))}
   .hex{position:absolute;left:0;right:0;bottom:1.2cqw;text-align:center;font-size:.95cqw;color:#4fae6f;letter-spacing:.08em}
   .card{position:absolute;left:6%;top:16%;width:88%;aspect-ratio:1.18;background:linear-gradient(160deg,#256b35,#1c5a2b);border:1px solid #4fd37e;box-shadow:0 0 2cqw rgba(60,240,124,.15) inset;
     transition:transform .12s ease-out,opacity .12s;display:flex;align-items:center;justify-content:center;cursor:pointer;
@@ -148,6 +155,7 @@
 <main>
   <div class="topbar"><a class="back" href="../"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>All games</a></div>
 
+  <div class="scene"><div class="monitor">
   <div class="screen" id="screen">
     <!-- PHASE 1: terminal -->
     <div class="view" id="term">
@@ -155,7 +163,7 @@
       <div class="prompt glow"><span>root@bobcat:~# </span><input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command"></div>
       <div class="status" id="status"></div>
     </div>
-    <div class="view glow" id="auth">AUTH CHANNEL ESTABLISHED</div>
+    <div class="view glow" id="auth">AUTH CHANNEL ESTABLISHED DOWNLOADING ENCRYPTED SIGNATURE... SIGNATURE CORRUPTED</div>
 
     <!-- PHASE 2: rings -->
     <div class="view" id="rings">
@@ -187,6 +195,7 @@
       <div class="btns" id="ovB"></div>
     </div>
   </div>
+  </div></div>
 
   <div class="row">
     <div class="stats" id="stats"></div>
@@ -224,7 +233,7 @@
 (() => {
   const DEFAULTS = {frags:4, time:120, lives:2, diff:1, skip:false};   // frags = choices on ring 1; each ring adds one (4, 5, 6, 7)
   const RADII = [38, 55, 76, 98], HALF = 128, THALF = 176;            // THALF: the signature only fills ~55% of its panel, like in-game
-  const COMMANDS = ['export KEYPAD','ls /mnt','cd /mnt/backup_drive','export CIPHER','mount /dev/usb0','unset TRACE','ls -la /mnt/backup_drive',
+  const COMMANDS = ['auth unlock','export KEYPAD','ls /mnt','cd /mnt/backup_drive','export CIPHER','mount /dev/usb0','unset TRACE','ls -la /mnt/backup_drive',
     'export NODE=29','sync --force','cat auth.key','chmod 600 auth.key','export BYPASS=1','ls /mnt/backup_drive','umount /dev/usb0'];
   const store = {
     get(k,d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
@@ -363,7 +372,7 @@
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.strokeStyle = T.base; ctx.lineWidth = 0.9; ctx.stroke();
     // thick arcs
     ctx.save();
-    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 11 : 6;
+    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 9 : 5;
     ctx.strokeStyle = T.arc; ctx.lineWidth = theme === 'target' ? 4.2 : 3.6;
     if (ring.dashed && theme === 'target') ctx.setLineDash([7, 4]);
     else if (ring.dashed) ctx.setLineDash([7, 4]);
@@ -371,7 +380,7 @@
     ctx.restore();
     // everything on the ring gets a fuzzy halo, strongest on the captured signature
     const tgt = theme === 'target';
-    ctx.save(); ctx.shadowColor = tgt ? 'rgba(90,255,150,.9)' : 'rgba(225,255,235,.6)'; ctx.shadowBlur = tgt ? 5 : 3;
+    ctx.save(); ctx.shadowColor = tgt ? 'rgba(90,255,150,.9)' : 'rgba(225,255,235,.6)'; ctx.shadowBlur = tgt ? 4 : 2.5;
     // ticks
     ctx.strokeStyle = T.tick; ctx.lineWidth = tgt ? 1.1 : 0.9;
     for (const t of ring.ticks){
@@ -1339,7 +1348,7 @@
   }
 
   function resize(){
-    const w = Math.max(320, Math.min(1100, window.innerWidth - 32, (window.innerHeight - 130) * 4 / 3));
+    const w = Math.max(320, Math.min(1100, window.innerWidth - 32, (window.innerHeight - 200) * 1.42));
     document.documentElement.style.setProperty('--w', Math.floor(w) + 'px');
     if (game.phase === 'rings' || (game.phase === 'done' && game.rings.length)){
       requestAnimationFrame(() => { drawTarget(); renderRing(); });
