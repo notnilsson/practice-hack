@@ -61,13 +61,13 @@
   .col{border:1px solid rgba(60,240,124,.35);position:relative;padding:1.2cqw}
   .col h3{margin:0;font-size:1.2cqw;letter-spacing:.1em;font-weight:700;color:#7ff0a8}
   .fragno{text-align:center;font-size:1.35cqw;color:#e2f5e6;letter-spacing:.12em;margin-top:.4cqw}
-  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1;filter:blur(.045cqw)}
+  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1;filter:blur(.1cqw) drop-shadow(0 0 .45cqw rgba(60,240,124,.6)) drop-shadow(0 0 1.1cqw rgba(60,240,124,.3))}
   .hex{position:absolute;left:0;right:0;bottom:1.2cqw;text-align:center;font-size:.95cqw;color:#4fae6f;letter-spacing:.08em}
   .card{position:absolute;left:6%;top:16%;width:88%;aspect-ratio:1.18;background:linear-gradient(160deg,#256b35,#1c5a2b);border:1px solid #4fd37e;box-shadow:0 0 2cqw rgba(60,240,124,.15) inset;
     transition:transform .12s ease-out,opacity .12s;display:flex;align-items:center;justify-content:center;cursor:pointer;
     clip-path:polygon(0 3%,100% 0,100% 96%,48% 100%,0 99%)}   /* the slightly skewed card from the game */
   .card.flip{transform:scale(.9) perspective(600px) rotateY(-14deg);opacity:.55}
-  #cand{height:100%;aspect-ratio:1}
+  #cand{height:100%;aspect-ratio:1;filter:blur(.035cqw) drop-shadow(0 0 .35cqw rgba(225,255,235,.5))}
   .thumbs{position:absolute;left:0;right:0;bottom:3.6cqw;display:flex;justify-content:center;gap:1.4cqw}
   .thumbs canvas{width:5.4cqw;height:4.2cqw;border:1px solid rgba(60,240,124,.3);background:#18301e;cursor:pointer}
   .thumbs canvas:hover{border-color:var(--g)}
@@ -363,14 +363,17 @@
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.strokeStyle = T.base; ctx.lineWidth = 0.9; ctx.stroke();
     // thick arcs
     ctx.save();
-    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 7 : 4;
+    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 11 : 6;
     ctx.strokeStyle = T.arc; ctx.lineWidth = theme === 'target' ? 4.2 : 3.6;
     if (ring.dashed && theme === 'target') ctx.setLineDash([7, 4]);
     else if (ring.dashed) ctx.setLineDash([7, 4]);
     for (const [s, e] of ring.arcs){ ctx.beginPath(); ctx.arc(0, 0, r, rad(s), rad(e)); ctx.stroke(); }
     ctx.restore();
+    // everything on the ring gets a fuzzy halo, strongest on the captured signature
+    const tgt = theme === 'target';
+    ctx.save(); ctx.shadowColor = tgt ? 'rgba(90,255,150,.9)' : 'rgba(225,255,235,.6)'; ctx.shadowBlur = tgt ? 5 : 3;
     // ticks
-    ctx.strokeStyle = T.tick; ctx.lineWidth = 0.9;
+    ctx.strokeStyle = T.tick; ctx.lineWidth = tgt ? 1.1 : 0.9;
     for (const t of ring.ticks){
       const c = Math.cos(rad(t.a)), s = Math.sin(rad(t.a));
       ctx.beginPath();
@@ -392,11 +395,12 @@
       ctx.save(); ctx.rotate(rad(ring.notch)); ctx.fillStyle = T.notch; ctx.strokeStyle = theme === 'target' ? '#46f585' : '#cdf7da';
       ctx.lineWidth = .6; ctx.fillRect(r - 4, -1.8, 8, 3.6); ctx.strokeRect(r - 4, -1.8, 8, 3.6); ctx.restore();
     }
+    ctx.restore();
     // yellow squares
     for (const q of ring.squares){
       const d = r + q.d;
       ctx.save(); ctx.translate(Math.cos(rad(q.a)) * d, Math.sin(rad(q.a)) * d);
-      ctx.shadowColor = 'rgba(217,228,106,.6)'; ctx.shadowBlur = 3;
+      ctx.shadowColor = 'rgba(217,228,106,.85)'; ctx.shadowBlur = theme === 'target' ? 6 : 4;
       ctx.fillStyle = T.sq; ctx.fillRect(-2.7, -2.2, 5.4, 4.4); ctx.restore();
     }
   }
