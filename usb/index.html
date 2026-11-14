@@ -61,14 +61,15 @@
   .col{border:1px solid rgba(60,240,124,.35);position:relative;padding:1.2cqw}
   .col h3{margin:0;font-size:1.2cqw;letter-spacing:.1em;font-weight:700;color:#7ff0a8}
   .fragno{text-align:center;font-size:1.35cqw;color:#e2f5e6;letter-spacing:.12em;margin-top:.4cqw}
-  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1}
+  #target{position:absolute;left:4%;top:12%;width:92%;aspect-ratio:1;filter:blur(.045cqw)}
   .hex{position:absolute;left:0;right:0;bottom:1.2cqw;text-align:center;font-size:.95cqw;color:#4fae6f;letter-spacing:.08em}
   .card{position:absolute;left:6%;top:16%;width:88%;aspect-ratio:1.18;background:linear-gradient(160deg,#256b35,#1c5a2b);border:1px solid #4fd37e;box-shadow:0 0 2cqw rgba(60,240,124,.15) inset;
-    transition:transform .12s ease-out,opacity .12s;display:flex;align-items:center;justify-content:center}
-  .card.flip{transform:scale(.88) perspective(600px) rotateY(-14deg);opacity:.55}
+    transition:transform .12s ease-out,opacity .12s;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    clip-path:polygon(0 3%,100% 0,100% 96%,48% 100%,0 99%)}   /* the slightly skewed card from the game */
+  .card.flip{transform:scale(.9) perspective(600px) rotateY(-14deg);opacity:.55}
   #cand{height:100%;aspect-ratio:1}
   .thumbs{position:absolute;left:0;right:0;bottom:3.6cqw;display:flex;justify-content:center;gap:1.4cqw}
-  .thumbs canvas{width:6.2cqw;height:5cqw;border:1px solid rgba(60,240,124,.3);background:#18301e;cursor:pointer}
+  .thumbs canvas{width:5.4cqw;height:4.2cqw;border:1px solid rgba(60,240,124,.3);background:#18301e;cursor:pointer}
   .thumbs canvas:hover{border-color:var(--g)}
   .cyc{position:absolute;right:1.2cqw;top:9%;display:flex;flex-direction:row;gap:.6cqw}
   .cyc button,.confirm{font-family:inherit;font-size:1.25cqw;color:var(--g);background:rgba(10,30,15,.8);border:1px solid rgba(60,240,124,.5);border-radius:3px;padding:.5cqw .9cqw;cursor:pointer;letter-spacing:.06em}
@@ -77,8 +78,8 @@
   .hint{position:absolute;right:1.2cqw;bottom:1cqw;font-size:.95cqw;color:#7ff0a8;letter-spacing:.06em}
   .lives{position:absolute;left:2.4cqw;bottom:1.4cqw;display:flex;gap:.5cqw;align-items:center;font-size:.95cqw;color:#5fbf80}
   .lives i{width:1.1cqw;height:.9cqw;background:var(--g);display:inline-block}
-  .lives i.off{background:#3a2020;outline:1px solid #6b2a2a}
-  .banner{position:absolute;left:50%;top:9.5cqw;transform:translateX(-50%);padding:.5cqw 1.6cqw;font-size:1.3cqw;letter-spacing:.12em;border:1px solid var(--g);background:rgba(20,60,30,.92);color:#c9ffd9;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+  .lives i.off{background:transparent;outline:1px solid #c0503a;outline-offset:-1px}
+  .banner{position:absolute;left:50%;top:7.6cqw;transform:translateX(-50%);padding:.5cqw 1.6cqw;font-size:1.3cqw;line-height:1.35;text-align:center;letter-spacing:.12em;border:1px solid var(--g);background:rgba(20,60,30,.92);color:#c9ffd9;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:2}
   .banner.show{opacity:1}
   .banner.bad{border-color:var(--red);color:#ffc2c8;background:rgba(70,15,20,.92)}
 
@@ -171,11 +172,9 @@
         <div class="col">
           <h3 class="glow">SELECT RING FRAGMENT</h3>
           <div class="fragno" id="fragno">FRAGMENT 01 / 05</div>
-          <div class="card" id="card"><canvas id="cand"></canvas></div>
-          <div class="cyc"><button id="up" title="Previous (← / A)">◀</button><button id="down" title="Next (→ / D)">▶</button></div>
+          <div class="card" id="card" title="Click to confirm this fragment"><canvas id="cand"></canvas></div>
           <div class="thumbs"><canvas id="thPrev" title="Previous fragment"></canvas><canvas id="thNext" title="Next fragment"></canvas></div>
-          <button class="confirm" id="confirm">CONFIRM ⏎</button>
-          <div class="hint">[←/→] CYCLE FRAGMENT &nbsp;[ENTER] CONFIRM MATCH</div>
+          <div class="hint">[←/→ or W/S] CYCLE FRAGMENT &nbsp;[ENTER] CONFIRM MATCH</div>
         </div>
       </div>
       <div class="lives" id="lives"></div>
@@ -211,8 +210,9 @@
       <div class="rules">
         <b>Step 1 – terminal:</b> type each <b>[TASK]</b> line exactly and press Enter (3 attempts; type <b>help</b> to see the tasks again).<br>
         <b>Step 2 – rings:</b> rebuild the captured signature from the <b>inside out</b>. For each of the 4 rings, cycle the fragments with
-        the <b>←/→</b> arrow keys (or A/D, the ◀▶ buttons or the thumbnails) and press <b>Enter</b> when the fragment matches that ring on the left.
-        Decoys differ by a small detail — an arc gap, a tick, a yellow square or a marker. Compare one feature at a time.
+        the <b>←/→</b> arrow keys (W/S and A/D work too, or click the two small previews) and press <b>Enter</b> (or click the fragment) when it matches that ring on the left.
+        Ring 1 has 4 fragments to choose from, then 5, 6 and 7. Decoys differ by one small detail — an arc gap, a tick, a yellow square or a marker.
+        You have <b>2:00</b> and 3 integrity blocks: the third rejected fragment ends the run.
         R = restart (outside the terminal).
       </div>
     </div>
@@ -222,8 +222,8 @@
 <script src="../sfx.js"></script>
 <script>
 (() => {
-  const DEFAULTS = {frags:5, time:120, lives:2, diff:1, skip:false};
-  const RADII = [44, 62, 80, 98], HALF = 128;
+  const DEFAULTS = {frags:4, time:120, lives:2, diff:1, skip:false};   // frags = choices on ring 1; each ring adds one (4, 5, 6, 7)
+  const RADII = [38, 55, 76, 98], HALF = 128, THALF = 176;            // THALF: the signature only fills ~55% of its panel, like in-game
   const COMMANDS = ['export KEYPAD','ls /mnt','cd /mnt/backup_drive','export CIPHER','mount /dev/usb0','unset TRACE','ls -la /mnt/backup_drive',
     'export NODE=29','sync --force','cat auth.key','chmod 600 auth.key','export BYPASS=1','ls /mnt/backup_drive','umount /dev/usb0'];
   const store = {
@@ -265,18 +265,18 @@
       gaps.push([c - w/2, c + w/2]);
     }
     const arcs = gaps.map((gp, i) => { const nx = gaps[(i + 1) % g]; return [gp[1], nx[0] + (i + 1 === g ? 360 : 0)]; });
-    const tickA = spacedAngles(ri(5, 7), 18);
+    const tickA = spacedAngles(ri(5, 8), 16);
     const ticks = tickA.map(a => {
       const mode = Math.random();
-      const long = Math.random() < 0.22;
+      const long = Math.random() < 0.38;
       return {a, in: mode < 0.3 ? rnd(5, 10) : 0, out: mode > 0.15 ? rnd(6, 13) * (long ? 2.2 : 1) : 0};
     }).map(t => (t.in || t.out) ? t : {...t, out: 9});
-    const sqA = spacedAngles(ri(1, 3), 40);
-    const squares = sqA.map(a => ({a, d: rnd(11, 17)}));
+    const sqA = spacedAngles(ri(2, 4), 34);
+    const squares = sqA.map(a => ({a, d: rnd(9, 24)}));
     const blocks = spacedAngles(ri(0, 2), 30, tickA);
     const diamond = Math.random() < 0.65 ? rnd(0, 360) : null;
     const notch = Math.random() < 0.5 ? rnd(0, 360) : null;
-    return {k, r: RADII[k], arcs, ticks, squares, blocks, diamond, notch, dashed: k >= 2 && Math.random() < 0.55};
+    return {k, r: RADII[k], arcs, ticks, squares, blocks, diamond, notch, dashed: k >= 1 && Math.random() < 0.45};
   }
 
   // one mutation = one visible difference
@@ -287,7 +287,7 @@
     const op = pick(ops);
     if (op === 'gap'){
       const i = ri(0, m.arcs.length - 1), end = Math.random() < .5 ? 0 : 1;
-      const delta = (Math.random() < .5 ? -1 : 1) * rnd(20, 34) * big;
+      const delta = (Math.random() < .5 ? -1 : 1) * rnd(13, 21) * big;
       const arc = m.arcs[i].slice(); arc[end] += delta;
       const len = arc[1] - arc[0];
       const prev = m.arcs[(i - 1 + m.arcs.length) % m.arcs.length], next = m.arcs[(i + 1) % m.arcs.length];
@@ -297,41 +297,41 @@
     } else if (op === 'tick'){
       const t = pick(m.ticks), how = Math.random();
       if (how < 0.55){
-        const old = t.a; t.a = na(t.a + (Math.random() < .5 ? -1 : 1) * rnd(22, 40) * big);
+        const old = t.a; t.a = na(t.a + (Math.random() < .5 ? -1 : 1) * rnd(14, 24) * big);
         if (m.ticks.some(o => o !== t && adiff(o.a, t.a) < 10)){ t.a = old; return mutate(ring, strength); }
       } else if (how < 0.8){ if (t.out){ t.in = t.in || rnd(6, 10); t.out = 0; } else { t.out = rnd(8, 13); t.in = 0; } }
       else { if (t.out) t.out = t.out > 18 ? rnd(6, 10) : t.out * 2.3; else return mutate(ring, strength); }
     } else if (op === 'square'){
       const how = Math.random();
       if (how < 0.5 || m.squares.length === 1 && how < 0.75){
-        const s = pick(m.squares); const old = s.a; s.a = na(s.a + (Math.random() < .5 ? -1 : 1) * rnd(30, 60) * big);
+        const s = pick(m.squares); const old = s.a; s.a = na(s.a + (Math.random() < .5 ? -1 : 1) * rnd(20, 36) * big);
         if (m.squares.some(o => o !== s && adiff(o.a, s.a) < 28)){ s.a = old; return mutate(ring, strength); }
       } else if (how < 0.75){ m.squares.splice(ri(0, m.squares.length - 1), 1); }
       else {
         const a = spacedAngles(1, 40, m.squares.map(s => s.a))[0];
-        m.squares.push({a, d: rnd(11, 17)});
+        m.squares.push({a, d: rnd(9, 24)});
       }
     } else {
       const which = pick(['diamond','notch','block']);
       if (which === 'block'){
-        if (m.blocks.length && Math.random() < .6){ const i = ri(0, m.blocks.length - 1); m.blocks[i] = na(m.blocks[i] + rnd(35, 80) * (Math.random() < .5 ? -1 : 1)); }
+        if (m.blocks.length && Math.random() < .6){ const i = ri(0, m.blocks.length - 1); m.blocks[i] = na(m.blocks[i] + rnd(22, 45) * (Math.random() < .5 ? -1 : 1)); }
         else if (m.blocks.length && Math.random() < .5) m.blocks.pop(); else m.blocks.push(rnd(0, 360));
       } else {
         if (m[which] == null) m[which] = rnd(0, 360);
         else if (Math.random() < .35) m[which] = null;
-        else m[which] = na(m[which] + rnd(40, 100) * (Math.random() < .5 ? -1 : 1));
+        else m[which] = na(m[which] + rnd(22, 50) * (Math.random() < .5 ? -1 : 1));
       }
     }
     return m;
   }
 
-  const sig = r => JSON.stringify([r.arcs.map(a => a.map(x => Math.round(na(x) / 4))), r.ticks.map(t => [Math.round(na(t.a)/4), !!t.in, t.out > 18 ? 2 : t.out ? 1 : 0]).sort(),
+  const sig = r => JSON.stringify([r.arcs.map(a => a.map(x => Math.round(na(x) / 3))), r.ticks.map(t => [Math.round(na(t.a)/4), !!t.in, t.out > 18 ? 2 : t.out ? 1 : 0]).sort(),
     r.squares.map(s => Math.round(na(s.a)/6)).sort(), r.blocks.map(b => Math.round(na(b)/6)).sort(), r.diamond == null ? -1 : Math.round(na(r.diamond)/6), r.notch == null ? -1 : Math.round(na(r.notch)/6)]);
 
   function makeOptions(ring){
-    const opts = [ring], seen = new Set([sig(ring)]);
+    const opts = [ring], seen = new Set([sig(ring)]), want = cfg.frags + ring.k;
     let guard = 0;
-    while (opts.length < cfg.frags && guard++ < 500){
+    while (opts.length < want && guard++ < 500){
       let d = ring;
       for (let i = 0; i < cfg.diff; i++) d = mutate(d, cfg.diff);
       const s = sig(d);
@@ -355,7 +355,7 @@
 
   function drawRing(ctx, ring, theme){
     const T = theme === 'target'
-      ? {base:'rgba(150,180,60,.55)', arc:'#46f585', arcGlow:'rgba(60,240,124,.75)', tick:'#a9f3c4', block:'#f2f7f2', diamond:'#46f585', notch:'#0f1a12', sq:'#d9e46a'}
+      ? {base:'rgba(150,180,60,.4)', arc:'#3fe37b', arcGlow:'rgba(60,240,124,.8)', tick:'rgba(150,235,180,.7)', block:'#e6f2e8', diamond:'#3fe37b', notch:'#0f1a12', sq:'#cfd95f'}
       : {base:'#93a33c', arc:'#eef7ef', arcGlow:'rgba(230,255,235,.55)', tick:'#cdf7da', block:'#ffffff', diamond:'#eef7ef', notch:'#13241a', sq:'#dbe56b'};
     const r = ring.r;
     ctx.lineCap = 'butt';
@@ -363,8 +363,8 @@
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.strokeStyle = T.base; ctx.lineWidth = 0.9; ctx.stroke();
     // thick arcs
     ctx.save();
-    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 6 : 4;
-    ctx.strokeStyle = T.arc; ctx.lineWidth = 3.6;
+    ctx.shadowColor = T.arcGlow; ctx.shadowBlur = theme === 'target' ? 7 : 4;
+    ctx.strokeStyle = T.arc; ctx.lineWidth = theme === 'target' ? 4.2 : 3.6;
     if (ring.dashed && theme === 'target') ctx.setLineDash([7, 4]);
     else if (ring.dashed) ctx.setLineDash([7, 4]);
     for (const [s, e] of ring.arcs){ ctx.beginPath(); ctx.arc(0, 0, r, rad(s), rad(e)); ctx.stroke(); }
@@ -402,21 +402,21 @@
   }
 
   function drawTarget(){
-    const c = $('target'); const ctx = setupCanvas(c);
-    ctx.clearRect(-HALF*2, -HALF*2, HALF*4, HALF*4);
+    const c = $('target'); const ctx = setupCanvas(c, THALF);
+    ctx.clearRect(-THALF*2, -THALF*2, THALF*4, THALF*4);
     // core
     ctx.save(); ctx.shadowColor = 'rgba(60,240,124,.7)'; ctx.shadowBlur = 5;
     ctx.strokeStyle = '#46f585'; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(0, 0, 11, 0, Math.PI * 2); ctx.stroke();
-    for (let i = 0; i < 4; i++){ const a = i * Math.PI / 2; ctx.beginPath(); ctx.arc(Math.cos(a) * 22, Math.sin(a) * 22, 3.2, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.beginPath(); ctx.arc(0, 0, 31, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(150,180,60,.45)'; ctx.lineWidth = .8; ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 4; i++){ const a = i * Math.PI / 2; ctx.beginPath(); ctx.arc(Math.cos(a) * 19, Math.sin(a) * 19, 2.8, 0, Math.PI * 2); ctx.stroke(); }
+    ctx.beginPath(); ctx.arc(0, 0, 28, 0, Math.PI * 2); ctx.strokeStyle = 'rgba(150,180,60,.45)'; ctx.lineWidth = .8; ctx.stroke();
     ctx.restore();
     for (const r of game.rings) drawRing(ctx, r, 'target');
   }
 
   function drawCandidate(canvas, ring, small){
-    // zoom so the current ring fills the card like in-game (inner rings get magnified)
-    const ctx = setupCanvas(canvas, Math.max(ring.r + 30, 76));
+    // same scale for every ring, like in-game: inner rings are small in the card, with dotted guides for all four
+    const ctx = setupCanvas(canvas, HALF);
     ctx.clearRect(-HALF*2, -HALF*2, HALF*4, HALF*4);
     if (!small){
       ctx.setLineDash([2, 3]); ctx.strokeStyle = 'rgba(80,220,120,.35)'; ctx.lineWidth = .7;
@@ -424,7 +424,7 @@
       ctx.setLineDash([]);
     }
     ctx.strokeStyle = '#59e08a'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.stroke();
     drawRing(ctx, ring, 'cand');
   }
 
@@ -448,7 +448,7 @@
     hideOv();
     game.rings = RADII.map((_, k) => makeRing(k));
     game.options = game.rings.map(r => makeOptions(r));
-    game.ring = 0; game.idx = 0; game.lives = cfg.lives; game.end = 0; game.flawless = true;
+    game.ring = 0; game.idx = 0; game.lives = cfg.lives; game.end = 0; game.flawless = true; game.log = ['reconstruction channel open'];
     game.start = performance.now();
     $('node').textContent = 'BOBCAT-SEC-NODE-' + ri(10, 99);
     $('sess').textContent = 'SESSION ' + Math.random().toString(16).slice(2, 8).toUpperCase();
@@ -523,12 +523,12 @@
     show('rings');
     renderLives();
     requestAnimationFrame(() => { drawTarget(); renderRing(); });
-    banner('MATCH SIGNATURE PATTERN — NO LABELS');
+    banner('REBUILD THE CAPTURED SIGNATURE MATCH PATTERN<br>FRAGMENTS — NO LABELS', false, 2600);
   }
   function renderLives(){
     const el = $('lives'); el.innerHTML = '';
-    for (let i = 0; i <= cfg.lives; i++){ const s = document.createElement('i'); if (i > game.lives) s.className = 'off'; el.appendChild(s); }
-    const t = document.createElement('span'); t.textContent = ' reconstruction channel open'; el.appendChild(t);
+    for (let i = 0; i <= cfg.lives; i++){ const s = document.createElement('i'); if (i < cfg.lives - game.lives) s.className = 'off'; el.appendChild(s); }
+    const t = document.createElement('span'); t.textContent = (game.log || []).slice(-4).join(' · '); el.appendChild(t);
   }
   function renderRing(anim){
     const o = game.options[game.ring], n = o.opts.length;
@@ -552,21 +552,21 @@
     if (game.phase !== 'rings') return;
     const o = game.options[game.ring];
     if (game.idx === o.correct){
-      banner(`RING ${game.ring + 1} MATCHED`);
+      game.log.push(`layer ${game.ring + 1} secured`); renderLives();
       if (game.ring + 1 < RADII.length) SFX.play('confirm');
       game.ring++; game.idx = 0;
       if (game.ring >= RADII.length) return winRun();
       renderRing(true);
     } else {
-      game.lives--; renderLives(); game.flawless = false;
+      game.lives--; game.flawless = false;
+      game.log.push(`fragment rejected — integrity ${game.lives + 1}/${cfg.lives + 1}`); renderLives();
       SFX.play('bad');
-      banner('SIGNATURE MISMATCH', true);
       if (game.lives < 0) failRun(`Wrong fragment on ring ${game.ring + 1}. The correct one was fragment ${String(o.correct + 1).padStart(2, '0')} — it's shown now.`, true);
     }
   }
-  function banner(text, bad){
-    const b = $('banner'); b.textContent = text; b.className = 'banner show' + (bad ? ' bad' : '');
-    clearTimeout(game.bannerT); game.bannerT = setTimeout(() => b.classList.remove('show'), 1100);
+  function banner(text, bad, ms){
+    const b = $('banner'); b.innerHTML = text; b.className = 'banner show' + (bad ? ' bad' : '');
+    clearTimeout(game.bannerT); game.bannerT = setTimeout(() => b.classList.remove('show'), ms || 1100);
   }
 
   function winRun(){
@@ -1260,7 +1260,7 @@
   }
 
   // ---------- shortcut: typing the word below (outside the terminal) plays the ending ----------
-  // uses no shortcut letters (M, R, A, D), so it never blocks or delays another key
+  // avoids M, R, A, D and W; its two S presses just flip the fragment forward if typed during the ring step
   const CHEAT = 'eyesonyou';
   let cheatBuf = '', cheatLast = 0;
   window.addEventListener('keydown', e => {
@@ -1294,16 +1294,15 @@
   }
 
   // ---------- input ----------
-  $('up').onclick = () => cycle(-1);
-  $('down').onclick = () => cycle(1);
   $('thPrev').onclick = () => cycle(-1);
   $('thNext').onclick = () => cycle(1);
-  $('confirm').onclick = confirm;
+  $('card').onclick = confirm;
   window.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     if (game.phase === 'rings'){
-      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A'){ e.preventDefault(); cycle(-1); }
-      else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D'){ e.preventDefault(); cycle(1); }
+      const k = e.key.toLowerCase();
+      if (k === 'arrowleft' || k === 'a' || k === 'w' || k === 'arrowup'){ e.preventDefault(); cycle(-1); }
+      else if (k === 'arrowright' || k === 'd' || k === 's' || k === 'arrowdown'){ e.preventDefault(); cycle(1); }
       else if (e.key === 'Enter'){ e.preventDefault(); confirm(); }
     }
     if ((e.key === 'r' || e.key === 'R') && game.phase !== 'term') newGame();
